@@ -1,0 +1,159 @@
+#!/bin/bash
+# Quick test version of the agent_region experiment
+# Tests only a few agent_region values with fewer trials for rapid validation
+
+# source /opt/conda/etc/profile.d/conda.sh
+source /opt/anaconda3/etc/profile.d/conda.sh
+conda init
+conda activate logicity
+
+# Configuration
+CONFIG_FILE="config/tasks/sim/expert.yaml"
+BACKUP_CONFIG="${CONFIG_FILE}.backup"
+MAX_STEPS=100
+NUM_TRIALS=3  # Only 3 trials for quick testing
+LOG_DIR="log_sim"
+
+# Test only a few agent_region values for quick validation
+AGENT_REGIONS=(70 120 180)
+
+# Create results directory
+RESULTS_DIR="quick_test_results_$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$RESULTS_DIR"
+
+# Backup original config
+cp "$CONFIG_FILE" "$BACKUP_CONFIG"
+
+echo "=========================================="
+echo "Quick Test - Agent Region Experiment"
+echo "=========================================="
+echo "Number of trials per agent_region: $NUM_TRIALS"
+echo "Agent regions to test: ${AGENT_REGIONS[@]}"
+echo "Max steps per trial: $MAX_STEPS"
+echo "Results directory: $RESULTS_DIR"
+echo "=========================================="
+echo ""
+
+# Function to update agent_region in config file
+update_agent_region() {
+    local region=$1
+    sed -i.tmp "s/agent_region:.*/agent_region: $region/" "$CONFIG_FILE"
+    rm -f "${CONFIG_FILE}.tmp"
+}
+
+# Function to extract metrics from log file
+extract_metrics() {
+    local log_file=$1
+    grep "Per-Agent Averages" "$log_file" | tail -1 | \
+        awk -F'Fully: |, Partially: |, Unobserved: | \\(Agents' '{print $2, $3, $4}'
+}
+
+# Main experiment loop
+for region in "${AGENT_REGIONS[@]}"; do
+    echo "=========================================="
+    echo "Testing agent_region = $region"
+    echo "=========================================="
+    
+    update_agent_region "$region"
+    echo "Updated $CONFIG_FILE with agent_region: $region"
+    
+    declare -a fully_values
+    declare -a partially_values
+    declare -a unobserved_values
+    
+    for seed in $(seq 0 $((NUM_TRIALS - 1))); do
+        EXPNAME="quick_test_region${region}_seed${seed}"
+        LOG_FILE="${LOG_DIR}/${EXPNAME}.log"
+        
+        echo -n "  Trial $((seed + 1))/$NUM_TRIALS (seed=$seed)... "
+        
+        python3 main.py --config "$CONFIG_FILE" \
+                --exp "$EXPNAME" \
+                --max-steps $MAX_STEPS \
+                --seed $seed \
+                --log_dir "$LOG_DIR" > "$LOG_FILE" 2>&1
+        
+        metrics=$(extract_metrics "$LOG_FILE")
+        
+        if [ -n "$metrics" ]; then
+            read fully partially unobserved <<< "$metrics"
+            fully_values+=("$fully")
+            partially_values+=("$partially")
+            unobserved_values+=("$unobserved")
+            echo "Done (Fully: $fully, Partially: $partially, Unobserved: $unobserved)"
+        else
+            echo "Failed to extract metrics"
+        fi
+    done
+    
+    if [ ${#fully_values[@]} -gt 0 ]; then
+        echo ""
+        echo "  Computing averages across $NUM_TRIALS trials..."
+        
+        # Convert bash arrays to comma-separated values for Python
+        fully_str=$(IFS=,; echo "${fully_values[*]}")
+        partially_str=$(IFS=,; echo "${partially_values[*]}")
+        unobserved_str=$(IFS=,; echo "${unobserved_values[*]}")
+        
+        avg_metrics=$(python3 -c "
+import sys
+fully = [${fully_str}]
+partially = [${partially_str}]
+unobserved = [${unobserved_str}]
+
+avg_fully = sum(fully) / len(fully) if fully else 0
+avg_partially = sum(partially) / len(partially) if partially else 0
+avg_unobserved = sum(unobserved) / len(unobserved) if unobserved else 0
+
+print(f'{avg_fully:.2f} {avg_partially:.2f} {avg_unobserved:.2f}')
+")
+        
+        read avg_fully avg_partially avg_unobserved <<< "$avg_metrics"
+        
+        echo ""
+        echo "=========================================="
+        echo "RESULTS FOR agent_region = $region"
+        echo "=========================================="
+        echo "Per-Agent Averages (averaged over $NUM_TRIALS trials):"
+        echo "  Fully observed:     $avg_fully"
+        echo "  Partially observed: $avg_partially"
+        echo "  Unobserved:         $avg_unobserved"
+        echo "=========================================="
+        echo ""
+        
+        echo "$region $avg_fully $avg_partially $avg_unobserved" >> "${RESULTS_DIR}/summary.txt"
+    else
+        echo ""
+        echo "ERROR: No valid metrics collected for agent_region = $region"
+        echo ""
+    fi
+    
+    unset fully_values
+    unset partially_values
+    unset unobserved_values
+done
+
+# Restore original config
+cp "$BACKUP_CONFIG" "$CONFIG_FILE"
+rm -f "$BACKUP_CONFIG"
+
+# Print final summary
+echo ""
+echo "=========================================="
+echo "QUICK TEST SUMMARY"
+echo "=========================================="
+echo "agent_region | Fully | Partially | Unobserved"
+echo "-------------|-------|-----------|------------"
+
+if [ -f "${RESULTS_DIR}/summary.txt" ]; then
+    while read -r region fully partially unobserved; do
+        printf "%12s | %5s | %9s | %10s\n" "$region" "$fully" "$partially" "$unobserved"
+    done < "${RESULTS_DIR}/summary.txt"
+fi
+
+echo "=========================================="
+echo ""
+echo "Quick test completed! Results saved to: $RESULTS_DIR"
+echo "To run full experiment, use: ./scripts/sim/run_agent_region_experiments.sh"
+echo ""
+

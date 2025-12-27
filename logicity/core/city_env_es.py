@@ -8,8 +8,8 @@ from ..utils.vis import visualize_city
 from ..utils.gym_wrapper import GymCityWrapper
 
 class CityEnvES(CityEnv):
-    def __init__(self, grid_size, local_planner, logic_engine_file, rl_agent, use_multi=False):
-        super().__init__(grid_size, local_planner, logic_engine_file, rl_agent, use_multi=use_multi)
+    def __init__(self, grid_size, local_planner, logic_engine_file, rl_agent, use_multi=False, config=None):
+        super().__init__(grid_size, local_planner, logic_engine_file, rl_agent, use_multi=use_multi, config=config)
         self.rl_agent = rl_agent
         self.logic_grounding_shape, self.pred_grounding_index = self.local_planner.logic_grounding_shape(self.rl_agent["fov_entities"])
         # semantic obs shape
@@ -66,9 +66,15 @@ class CityEnvES(CityEnv):
         current_obs["Expert_sg"] = []
         current_obs["Ground_dic"] = []
 
+        # GNA Phase 1: Collect pre-grounding data from all agents
+        # GNA Phase 2: Broadcast global context to all agents
+        gna_broadcast = self.gna.orchestrate_global_reasoning(self)
+        # Phase 3: Make broadcast available to all agents
+        self.set_global_context_for_agents(gna_broadcast)
+
         new_matrix = torch.zeros_like(self.city_grid)
         current_world = self.city_grid.clone()
-        # first do local planning based on city rules
+        # Agents now perform local planning with global context available
         agent_action_dist = self.local_planner.plan(current_world, self.intersection_matrix, self.agents, \
                                                     self.layer_id2agent_list_id, use_multiprocessing=self.use_multi, rl_agent=idx)
         # Then do global action taking acording to the local planning results

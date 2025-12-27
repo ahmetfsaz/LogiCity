@@ -1,5 +1,6 @@
 from .building import Building
 from ..planners import LPlanner_mapper
+from ..agents.gna import GlobalNavigationAssistant
 import time
 import numpy as np
 import logging
@@ -16,7 +17,7 @@ from ..utils.gen import gen_occ
 logger = logging.getLogger(__name__)
 
 class City:
-    def __init__(self, grid_size, local_planner, logic_engine_file=None, use_multi=False):
+    def __init__(self, grid_size, local_planner, logic_engine_file=None, use_multi=False, config=None):
         self.grid_size = grid_size
         self.layers = BASIC_LAYER
         # 0 for blocks
@@ -35,8 +36,32 @@ class City:
         self.local_planner = LPlanner_mapper[local_planner](logic_engine_file)
         self.use_multi = use_multi
         self.logic_grounds = {}
+        # Global Navigation Assistant for enhanced coordination
+        enable_gna = config.get('enable_gna', False) if config else False
+        gna_top_k = config.get('gna_top_k', 5) if config else 5
+        gna_selection_mode = config.get('gna_selection_mode', 'priority') if config else 'priority'
+        self.gna = GlobalNavigationAssistant(top_k=gna_top_k, selection_mode=gna_selection_mode)
+        if not enable_gna:
+            self.gna.disable()
+
+        # Sub-rule analysis configuration
+        self.enable_subrule_analysis = config.get('enable_subrule_analysis', False) if config else False
+
+        logger.info(f"City initialized with GNA: {'ENABLED' if enable_gna else 'DISABLED'}, Top-K: {gna_top_k}, Selection: {gna_selection_mode}")
+        logger.info(f"Sub-rule analysis: {'ENABLED' if self.enable_subrule_analysis else 'DISABLED'}")
         # vis color map
         self.color_map = COLOR_MAP
+
+    def set_global_context_for_agents(self, broadcast):
+        """Set the global context broadcast for all agents to use in their reasoning."""
+        if broadcast is None:
+            return
+
+        logger.debug(f"GNA: Distributing broadcast {broadcast['broadcast_id']} to {len(self.agents)} agents")
+        for agent in self.agents:
+            if agent is not None:
+                agent.receive_global_context(broadcast)
+        logger.debug("GNA: Broadcast distribution completed")
 
     def update(self):
         current_obs = {}
@@ -44,11 +69,22 @@ class City:
         current_obs["World"] = self.city_grid.clone()
         current_obs["Agent_actions"] = []
 
+        # GNA Phase 1: Collect pre-grounding data from all agents
+        # GNA Phase 2: Broadcast global context to all agents
+        gna_broadcast = self.gna.orchestrate_global_reasoning(self)
+
         new_matrix = torch.zeros_like(self.city_grid)
         current_world = self.city_grid.clone()
-        # first do local planning based on city rules, use the current world state, don't update the city matrix
-        agent_action_dist = self.local_planner.plan(current_world, self.intersection_matrix, self.agents, \
-                                                    self.layer_id2agent_list_id, use_multiprocessing=self.use_multi)
+        # Agents now perform local planning with global context available
+        agent_action_dist, subrule_analysis = self.local_planner.plan(
+            current_world, self.intersection_matrix, self.agents,
+            self.layer_id2agent_list_id, use_multiprocessing=self.use_multi,
+            gna_broadcast=gna_broadcast, enable_subrule_analysis=self.enable_subrule_analysis
+        )
+
+        # Store sub-rule analysis if enabled
+        if self.enable_subrule_analysis:
+            current_obs["Subrule_Analysis"] = subrule_analysis
         # Then do global action taking acording to the local planning results
         # get occupancy map
         for agent in self.agents:
@@ -261,3 +297,4 @@ class City:
         agent_color = [random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)]
         if "{}_{}".format(agent.type, agent.id) not in self.color_map.keys():
                 self.color_map["{}_{}".format(agent.type, agent.id)] = agent_color
+

@@ -1,4 +1,6 @@
 # source /opt/conda/etc/profile.d/conda.sh
+source /opt/anaconda3/etc/profile.d/conda.sh
+conda init
 conda activate logicity
 
 EXPNAME="easy_100"

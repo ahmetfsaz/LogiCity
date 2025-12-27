@@ -8,6 +8,13 @@ simulation:
   rl: false
   debug: false
   use_multi: false
-  agent_region: 120
+  enable_gna: true
+  gna_top_k: 1
+  gna_selection_mode: priority  # "priority" or "random"
+  enable_subrule_analysis: true  # Enable sub-rule satisfiability analysis
+  agent_region: 70
   
+
+
+
 

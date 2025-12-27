@@ -1,0 +1,1278 @@
+\documentclass{article}
+
+
+% if you need to pass options to natbib, use, e.g.:
+%     \PassOptionsToPackage{numbers, compress}{natbib}
+\PassOptionsToPackage{numbers, compress, square, sort}{natbib}
+% before loading neurips_2024
+
+
+% ready for submission
+\usepackage[final]{neurips_data_2024}
+
+
+% to compile a preprint version, e.g., for submission to arXiv, add add the
+% [preprint] option:
+%     \usepackage[preprint]{neurips_2024}
+
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+%     \usepackage[final]{neurips_2024}
+
+
+% to avoid loading the natbib package, add option nonatbib:
+%    \usepackage[nonatbib]{neurips_2024}
+
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+
+% Define a command to switch to Monaco font
+\usepackage[hidelinks]{hyperref}       % hyperlinks
+\usepackage{wrapfig}
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+\usepackage{amsmath,amssymb} % define this before the line numbering.
+\usepackage{pifont}  % For \Xmark
+\usepackage{makecell}
+\usepackage{diagbox}
+\usepackage{booktabs}
+% % Support for easy cross-referencing
+\usepackage{graphics} % for pdf, bitmapped graphics files
+\usepackage{adjustbox}
+\usepackage{colortbl}
+\usepackage{xcolor}
+% \usepackage{epsfig} % for postscript graphics files
+\usepackage{empheq}
+%\usepackage{mathptmx} % assumes new font selection scheme installed
+% \usepackage{times} % assumes new font selection scheme installed
+\usepackage{bm}
+\usepackage{bbding} %首先在导言区调用bbding包
+\usepackage[textwidth=1in]{todonotes}
+% \usepackage{cite}
+\usepackage{diagbox}
+% \usepackage[linesnumbered,ruled]{algorithm2e}
+% \usepackage{ulem} %to strike the words
+% \usepackage{hyperref}
+% \usepackage{soul}
+% \soulregister{\cite}7 % 注册\cite命令
+% \soulregister{\cite}7 % 注册\cite命令
+% \soulregister{\cite}7 % 注册\cite命令
+% \soulregister{\ref}7 % 注册\ref命令
+% \soulregister{\pageref}7 % 注册\pageref命令
+
+\newcommand{\cmark}{\ding{51}}%
+\newcommand{\xmark}{\ding{55}}%
+\definecolor{lightblue}{HTML}{DBE9FC}
+\definecolor{lighterblue}{HTML}{f1fcfe}
+\definecolor{darkblue}{HTML}{6c8ebf}
+% \definecolor{themeblue}{RGB}{57, 162, 219}
+% \definecolor{themegreen}{RGB}{87, 204, 153}
+% \definecolor{forestgreen}{RGB}{47, 159, 87}
+
+\usepackage[capitalize]{cleveref}
+% \usepackage{todonotes}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{multirow}
+%\usepackage{ bbold }
+\usepackage{mathrsfs}
+\usepackage[utf8]{inputenc}
+%\usepackage{subfigure}
+\usepackage{pifont}
+\usepackage{threeparttable}
+\usepackage[lined,boxed,commentsnumbered,ruled,vlined]{algorithm2e}
+\usepackage{tcolorbox}
+% \usepackage[finalizecache,cachedir=.]{minted}
+\usepackage[frozencache,cachedir=.]{minted}
+\SetKwComment{Comment}{$\triangleright$\ }{}
+
+\hypersetup{
+    colorlinks,
+    linkcolor={red!50!black},
+    citecolor={blue!50!black},
+    urlcolor={blue!80!black}
+}
+
+\let\llncssubparagraph\subparagraph
+%% Provide a definition to \subparagraph to keep titlesec happy
+\let\subparagraph\paragraph
+%% Load titlesec
+\usepackage[compact]{titlesec}
+%% Revert \subparagraph to the llncs definition
+% \let\subparagraph\llncssubparagraph
+% \titlespacing{\section}{0pt}{1.5ex}{1.2ex}
+% \titlespacing{\subsection}{0pt}{1.2ex}{1.0ex}
+% \titlespacing{\subsubsection}{0pt}{0.5ex}{0.1ex}
+% \titlespacing{\paragraph}{5ex}{2ex}{2ex}
+% \setlength{\parskip}{2pt}
+
+\newcounter{RNum}
+\renewcommand{\theRNum}{\arabic{RNum}}
+\newcommand{\Remark}{\noindent\textbf{Remark}~\refstepcounter{RNum}\textbf{\theRNum}: }
+\newcommand{\fref}[1]{Figure~\ref{#1}}
+\newcommand{\sref}[1]{Section~\ref{#1}}
+\newcommand{\tref}[1]{Table~\ref{#1}}
+\newcommand{\appref}[1]{Appendix~\ref{#1}}
+\newcommand{\highlight}[1]{\noindent\quad\textbf{#1}:~}
+\newcommand{\myparagraph}[1]{\noindent\textbf{#1}~}
+
+\newcommand{\tablestyle}[2]{\setlength{\tabcolsep}{#1}\renewcommand{\arraystretch}{#2}\centering\footnotesize}
+
+\newcommand{\zhaoyu}[1]{\textcolor{brown}{zhaoyu: #1\:}}
+\definecolor{jinqired}{HTML}{990000}
+\newcommand{\jinqi}[1]{\textcolor{jinqired}{[Jinqi]: #1\:}}
+\newcommand{\ks}[1]{\textcolor{blue}{[Katia]: #1\:}}
+\def\model{LogiCity}
+
+\title{\model{}: Advancing Neuro-Symbolic AI with Abstract Urban Simulation}
+
+%\jinqi{this is a comment}
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+
+\author{%
+  \textbf{Bowen Li}$^{1}$ 
+  \quad
+  \textbf{Zhaoyu Li}$^{2}$
+  \quad
+  \textbf{Qiwei Du}$^{3}$
+  \quad
+  \textbf{Jinqi Luo}$^{4}$
+  \quad
+  \textbf{Wenshan Wang}$^{1}$
+  \quad
+  \textbf{Yaqi Xie}$^{1}$
+  \\
+  \textbf{Simon Stepputtis}$^{1}$
+  \quad
+  \textbf{Chen Wang}$^{3}$
+  \quad
+  \textbf{Katia Sycara}$^{1}$
+  \quad
+  \textbf{Pradeep Ravikumar}$^{1}$
+  \\
+  \textbf{Alexander Gray}$^{5}$
+  \quad
+  \textbf{Xujie Si}$^{2,6}$
+  \quad
+  \textbf{Sebastian Scherer}$^{1\,*}$
+  \\
+  $^1$Carnegie Mellon University
+  \quad
+  $^2$University of Toronto
+  \quad
+  $^3$University at Buffalo
+  \\
+  $^4$University of Pennsylvania
+  \quad
+  $^5$Centaur AI Institute 
+  \quad
+  $^6$CIFAR AI Chair, Mila\\
+  \texttt{\{bowenli2, basti\}@andrew.cmu.edu}
+}
+
+
+\begin{document}
+
+
+\maketitle
+
+
+\begin{abstract}
+  Recent years have witnessed the rapid development of Neuro-Symbolic (NeSy) AI systems, which integrate symbolic reasoning into deep neural networks.
+  However, most of the existing benchmarks for NeSy AI fail to provide long-horizon reasoning tasks with complex multi-agent interactions.
+  Furthermore, they are usually constrained by fixed and simplistic logical rules over limited entities, making them far from real-world complexities.
+  To address these crucial gaps, we introduce \model{}, the first simulator based on customizable first-order logic (FOL) for an urban-like environment with multiple dynamic agents.
+  \model{} models diverse urban elements using semantic and spatial \textit{concepts}, such as $\texttt{IsAmbulance}(\texttt{X})$ and $\texttt{IsClose}(\texttt{X}, \texttt{Y})$. 
+  These concepts are used to define FOL rules that govern the behavior of various agents. 
+  Since the concepts and rules are \textit{abstractions}, they can be universally applied to cities with any agent compositions, facilitating the instantiation of diverse scenarios.
+  Besides, a key feature of \model{} is its support for user-configurable abstractions, enabling customizable simulation complexities for logical reasoning.
+  To explore various aspects of NeSy AI, \model{} introduces two tasks, one features long-horizon sequential decision-making, and the other focuses on one-step visual reasoning, varying in difficulty and agent behaviors.
+  Our extensive evaluation reveals the advantage of NeSy frameworks in \textit{abstract} reasoning. 
+  Moreover, we highlight the significant challenges of handling more complex abstractions in long-horizon multi-agent scenarios or under high-dimensional, imbalanced data.
+  With its flexible design, various features, and newly raised challenges, we believe \model{} represents a pivotal step forward in advancing the next generation of NeSy AI.
+  All the code and data are open-sourced at our \href{https://jaraxxus-me.github.io/LogiCity/}{website}.
+\end{abstract}
+
+
+\section{Introduction}
+
+% 1. NeSy AI intro
+Unlike most existing deep neural networks~\citep{achiam2023gpt4,He2016res}, humans are not making predictions and decisions in a relatively black-box way~\citep{tenenbaum2011josh}.
+Instead, when we learn to drive a vehicle, play sports, or solve math problems, we naturally leverage and explore the underlying symbolic representations and structure~\citep{tenenbaum2011josh,lake2015human,spelke2007core}.
+Such capability enables us to swiftly and robustly reason over complex situations and to adapt to new scenarios.
+To emulate human-like learning and reasoning, the Neuro-Symbolic (NeSy) AI community~\citep{kautz2022third} has introduced various hybrid systems~\citep{dong2019nlm,tran2016deepprob,riegel2020lnn,cropper2021popper,glanois2022hri,chitnis2022nsrt,li2020ngs,pmlr-v232-bhagat23a,li2024shapegrasp,zhang2024hikersgg,hsu2023ns3d,mao2019nscl}, integrating symbolic reasoning into deep neural networks to achieve higher data efficiency, interpretability, and robustness\footnote{This work mainly focuses on logical reasoning within the broad NeSy community.}.
+
+\begin{wraptable}{!t}{0.55\textwidth}
+\vspace{-0.6cm}
+    \caption{Comparison of existing NeSy benchmarks and \model{}. Our simulator is governed by diverse \textit{abstractions}, which can be flexibly customized. We also support long-horizon, multi-agent tasks and RGB rendering. ``$-$'' denotes partially supported features.}
+    \label{tab:benchmark}
+    \centering
+    \resizebox{0.55\textwidth}{!}{
+    \begin{tabular}{lccccc}
+    \toprule[1.5pt]
+    \multirow{2}{*}{\diagbox[]{Benchmarks}{Features}} & \multirow{2}{*}{\makecell{Abstract}} & \multirow{2}{*}{\makecell{Flexible}} & \multirow{2}{*}{\makecell{Multi-\\Agent}} & \multirow{2}{*}{\makecell{Long-\\Horizon}} & \multirow{2}{*}{\makecell{RGB}} \\
+    \\
+    \midrule
+    Visual Sudoku~\citep{wang2019satnet} & \ding{55}     & \ding{55}     & \ding{55}     & \ding{55}     & \ding{55} \\
+    Handwritten Formula~\citep{li2020ngs}   & \ding{55}     & \ding{55}     & \ding{55}     & \ding{55}     & \ding{55} \\
+    Smokers \& Friends~\citep{badreddine2022ltn} & \checkmark     & \ding{55}     & \ding{55}     & \ding{55}     & \ding{55} \\
+    CLEVR~\citep{johnson2017clevr} & \checkmark     & \checkmark     & \ding{55}     & \ding{55}     & \checkmark \\
+    BlocksWorld~\citep{dong2019nlm} & \checkmark      & \ding{55}     & \ding{55}     & \checkmark     & \ding{55} \\
+    Atari Games~\citep{machado2018atari} & \ding{55}     & $-$     &  $-$     & \checkmark     & \checkmark \\
+    Minigrid \& Miniworld~\citep{Maxime2023minigrid} & $-$     & $-$     & \ding{55}     & $-$     & \checkmark \\
+    BabyAI~\citep{chevalier2019babyai} & \checkmark     & $-$     & \ding{55}     & \checkmark     & \checkmark \\
+    HighWay~\citep{highway-env} & \checkmark     & \ding{55}     & \checkmark     & \ding{55}     & \checkmark \\
+    \midrule
+    \textbf{\model{} (Ours)} & \textbf{\checkmark}  & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{\checkmark} & \textbf{\checkmark} \\
+    \bottomrule[1.5pt]
+    \end{tabular}%
+    }
+\end{wraptable}
+
+
+% 2. problems
+\looseness = -1
+Despite their rapid advancement, many NeSy AI systems are designed and tested only in very simplified and limited environments, such as visual sudoku~\citep{wang2019satnet}, handwritten formula recognition~\citep{li2020ngs}, knowledge graphs~\citep{badreddine2022ltn}, and reasoning games/simulations~\citep{machado2018atari,dong2019nlm,Maxime2023minigrid,chevalier2019babyai,highway-env,johnson2017clevr} (see \tref{tab:benchmark}).
+A benefit of such environments is that they usually provide data with symbolic annotations, which the NeSy AI systems can easily integrate.
+However, they are still far from real-world complexity due to the lack of three key features:
+(1) Most simulators are governed by propositional rules tied to specific fixed entities~\citep{machado2018atari, wang2019satnet,li2020ngs} rather than \textbf{\textit{abstractions}}~\citep{dong2019nlm}. As a result, agents learned from them are hard to generalize compositionally.
+(2) In real life, we learn to reason gradually from simple to complex scenarios, requiring the rules within the environment to be \textbf{\textit{flexible}}. 
+Either overly simplified~\citep{dong2019nlm,Maxime2023minigrid,wang2019satnet} or overly complicated/unsuitable~\citep{kuttler2020nethack,fan2022minedojo} environments cannot promote the development of NeSy AI systems.
+(3) Few simulators offer realistic \textbf{\textit{multi-agent}} interactions, where the environment agents often need to actively adapt their behaviors in response to varying actions of the ego agent.
+Moreover, a comprehensive benchmark needs to provide both \textbf{\textit{long-horizon}} (e.g., $>$ 20 steps)~\citep{dong2019nlm} and \textbf{\textit{visual reasoning}}~\citep{wang2019satnet} scenarios to exercise different aspects of NeSy AI.
+% Due to these limitations, some advanced algorithms have already reached over 90\% accuracy~\citep{dong2019nlm,li2024reliasatnet}, highlighting the urgent need for more sophisticated while controllable testbeds.
+% However, we argue that a more favorable testbed should further address the following several key areas to capture the complexity of the real world:
+% (1) Real-world rules are often \textit{abstract} rather than propositional rules tied to specific fixed entities~\citep{machado2018atari, wang2019satnet}.
+% (2) Real-life decisions occur within diverse complexities of reasoning contexts instead of fixed rules~\citep{highway-env,machado2018atari,Maxime2023minigrid}.
+% (3) Real-world tasks usually require long-horizon (more than 20 steps) planning rather than just short-term reasoning~\citep{johnson2017clevr,badreddine2022ltn,highway-env}.
+% (4) Few simulators offer realistic multi-agent interactions, where agents often need to actively adapt their behaviors in response to varying actions of the ego agents.
+% (5) Real-life observations are usually high-dimensional and noisy, like RGB images, instead of structured symbols~\citep{dong2019nlm,badreddine2022ltn}.
+% We observe very few environments offering all the above features and that some advanced algorithms have already reached over 90\% accuracy in existing environments~\citep{dong2019nlm,li2024reliasatnet}, highlighting the urgent need for more sophisticated testbeds.
+
+% 3. Our sim
+\looseness = -1
+To address these issues, we introduce \model{}, the first customizable first-order-logic (FOL)-based~\citep{kowalski1974prolog} simulator and benchmark motivated by complex urban dynamics.
+As illustrated in \fref{fig:framework}, \model{} allows users to freely customize spatial and semantic conceptual attributes (concepts), FOL rules, and agent sets as configurations.
+Since the concepts and rules are \textit{abstractions}, they can be universally applied to any agent compositions across different cities.
+For example, in \fref{fig:framework}, concepts such as ``\texttt{IsClose}(\texttt{X}, \texttt{Y}), \texttt{IsAmbulance}(\texttt{Y})'', and rules like ``\texttt{Stop}(\texttt{X}):-\texttt{IsAmbulance}(\texttt{Y}), \texttt{IsClose}(\texttt{X}, \texttt{Y})'' can be \textit{grounded} with specific and distinct train/test agent sets to govern their behaviors in the simulation.
+To render the environment into diverse RGB images, we leverage foundational generative models~\citep{achiam2023gpt4,podell2023sdxl,rombach2021highresolution,meng2021sdedit}. 
+Since our modular framework enables seamless configuration adjustments, researchers can explore compositional generalization by changing agent sets while keeping abstractions fixed, or study adaptation to new and more complex abstractions by altering rules and concepts.
+
+To exercise different aspects of NeSy AI, we use \model{} to design tasks for both sequential decision-making (SDM) and visual reasoning.
+In the SDM task, algorithms need to navigate a lengthy path ($>$ 40 steps) with minimal trajectory cost, considering rule violations and step-wise action costs. 
+This involves planning amidst complex scenarios and interacting with multiple dynamic agents. 
+For instance, decisions like speeding up may incur immediate costs but could lead to a higher return in achieving the goal sooner.
+Notably, our SDM task is also unique in that training and testing agent compositions are different, requiring an agent to learn the abstractions and generalize to new compositions.
+Contrarily, the visual reasoning task focuses on single-step reasoning but features high-dimensional RGB inputs.
+Algorithms must perform sophisticated abstract reasoning to predict actions for all agents with high-level perceptual noise.
+Across both tasks, we vary reasoning complexity to evaluate the algorithms' ability to adapt and learn new abstractions.
+
+% Our results
+While we show that existing NeSy approaches~\citep{glanois2022hri,dong2019nlm} perform better in learning abstractions, both from scratch and continually, more complex scenarios from \model{} still pose significant challenges for prior arts~\citep{schulman2017ppo, mnih2016a2c, mnih2013dqn, dong2019nlm, glanois2022hri, cropper2021popper, cropper2024maxsynth, nagabandi2020mbrl, xu2018gnn, hafner2020dreamerv2}.
+On the one hand, \model{} raises the abstract reasoning complexity with long-horizon multiple agents scenario, which have not been adequately addressed by current methods.
+Besides, it also highlights the difficulty of learning complex abstractions from high-dimensional data even for one-step reasoning.
+On the other hand, \model{} provides flexible ground-truth symbolic abstractions, allowing for the new methods to be gradually designed, developed, and validated.
+Therefore, we believe \model{} represents a crucial step for advancing the next generation of NeSy AI capable of sophisticated abstract reasoning and learning.
+
+
+\section{Related Works}
+
+\begin{figure*}[!t]
+	\centering
+	\includegraphics[width=1\columnwidth]{imgs/fig1.pdf}
+    \caption{\model{} employs \textit{abstract} concepts and rules, allowing different agent sets to address compositional generalization. Its modular structure enables users to modify \textit{abstractions} flexibly.}
+    \label{fig:framework}
+\end{figure*}
+
+\subsection{Neuro-Symbolic AI}
+NeSy AI systems aim to integrate formal logical reasoning into deep neural networks. 
+We distinguish these systems into two categories: \textit{deductive} methods and \textit{inductive} methods.
+
+\myparagraph{Deductive Methods} typically operate under the assumption that the underlying symbolic structure and the chain of deductive reasoning (rules) are either known~\citep{badreddine2022ltn,riegel2020lnn,tran2016deepprob,xu2018semantic,xie2019lensr,huang2021scallop} or can be generated by an oracle~\citep{hsu2023ns3d,mao2019nscl,wang2022programmatically,hsu2023left}.
+Some of these approaches constructed differentiable logical loss functions that constrain the training of deep neural networks~\citep{xu2018semantic,xie2019lensr}.
+% For instance, Xu \textit{et al.}~\citep{xu2018semantic} proposed a semantic loss inspired by propositional logic, aiming to guide neural network training through logical constraints.
+Others, such as DeepProbLog~\citep{tran2016deepprob}, have formulated differential reasoning engines, thus enabling end-to-end learning~\citep{yang2020neurasp,winters2022deepstochlog,van2023nesi}.
+Recently, Large Language Models (LLMs) have been utilized to generate executable code~\citep{hsu2023ns3d,wang2022programmatically,hsu2023left} or planning abstractions~\citep{liu2024parl}, facilitating the modular integration of the grounding networks.
+Despite their success, deductive methods sidestep or necessitate the laborious manually engineered symbolic structure, which potentially limits their applicability in areas lacking formalized knowledge.
+
+\myparagraph{Inductive Methods} focus on generating the symbolic structure either through supervised learning~\citep{evans2018pilp,cropper2021popper,cropper2024maxsynth,glanois2022hri,yang2017neurallp,yang2019nlil} or by interacting with the environment~\citep{sen2022loa,defl2023nudge,kimura2021LOAAgent}.
+One line of research explicitly searches the rule space, such as $\partial$ILP~\citep{evans2018pilp}, Difflog~\citep{si2019Difflog}, and Popper~\citep{cropper2021popper}.
+% To name a few, Evan \textit{et al.} proposed $\partial$ILP~\citep{evans2018pilp}, which uses templates to generate rules and a network to determine the significance of these rules.
+% Cropper \textit{et al.} developed Popper~\citep{cropper2021popper}, employing failure-informed answer set programming to progressively refine the hypothesis space.
+However, as the rule space can be exponentially large for \textit{abstractions}, these methods often result in prolonged search times. 
+To address this, some strategies incorporate neural networks to accelerate the search process~\citep{yang2017neurallp,glanois2022hri,yang2019nlil}.
+Another avenue of inductive methods involves designing logic-inspired neural networks where rules are implicitly encoded within the learned weights~\citep{wang2019satnet,dong2019nlm, li2024learning, li2024neuro}, such as SATNet~\citep{wang2019satnet} and Neural Logic Machines (NLM)~\citep{dong2019nlm}.
+While these methods show promise for scalability and generalization, their applications have been predominantly limited to overly simplistic test environments.
+
+% Our \model{} aims at providing a much more challenging, realistic, yet controllable simulation environment to advance NeSy AI methods.
+
+\subsection{Games and Simulations}
+Various gaming environments~\citep{Maxime2023minigrid,chevalier2019babyai,kuttler2020nethack,machado2018atari} have been developed to advance AI agents.
+Atari games~\citep{machado2018atari}, for instance, provide diverse challenges ranging from spatial navigation in ``Pac-Man'' to real-time strategy in ``Breakout''.
+More complex games include NetHack~\citep{kuttler2020nethack}, StarCraft II~\citep{vinyals2017starcraft}, and MineCraft~\citep{fan2022minedojo}, where an agent is required to do strategic planning and resource management.
+\model{} shares similarities with these games in that agent behavior is governed by rules.
+Especially, LogiCity can be viewed as a Rogue-like gaming environment~\citep{kuttler2020nethack}, where maps and agent settings could be randomly generated in different runs.
+However, our simulator is uniquely tailored for the NeSy AI community because: 
+(1) \model{} provides formal symbolic structure in FOL, enhancing the validation and design of NeSy frameworks. 
+(2) Since FOL predicates and rules are abstractions, a user can arbitrarily customize the composition of the world, introducing adversarial scenarios.
+(3) \model{} also supports customizable reasoning complexity through flexible configuration settings.
+Another key difference between LogiCity and most games~\citep{vinyals2017starcraft,machado2018atari,kuttler2020nethack} is that the behavior of non-player characters (NPCs) in LogiCity is governed by global logical constraints rather than human-engineered behavior trees~\citep{nicolau2016btai,sekhavat2017bt4cg,iovino2022btsurvey,colledanchise2018behavior}. This design enables NPCs to automatically commit to actions that ensure global rule satisfaction, without the need for manual scripting.
+Moreover, compared to these games, \model{} is closer to real urban life, offering a more practical scenario.
+
+Addressing the need for realism, autonomous driving (AD) simulators~\citep{dosovitskiy2017carla,krajzewicz2010sumo,shah2018airsim,highway-env,fremont2019scenic1,fremont2023scenic2,vin2023scenic3} deliver high-quality rendering and accurate traffic simulations but often adhere to fixed rules for limited sets of \textit{concepts}. 
+Among them, the SCENIC language~\citep{fremont2019scenic1,fremont2023scenic2,vin2023scenic3} is the closest to \model{}, which uses Linear Temporal Logic to specify AD scenarios. 
+Unlike SCENIC, \model{} uses \textit{abstractions} in FOL, which allows for the generation of a large number of cities with distinct agent compositions more easily. 
+Besides, \model{} goes beyond these AD simulators by introducing a broader range of \textit{concepts} and more complex rules, raising the challenge of sophisticated logical reasoning.
+
+
+\section{\model{} Simulator}
+The overall framework of \model{} simulator is shown in \fref{fig:framework}. 
+In the configuration stage, a user is expected to provide \textit{Concepts}, Rules, and Agent set, which are fed into the \textit{abstraction}-based simulator to create a sequence of urban grid maps.
+These maps are rendered into diverse RGB images via generative models, including a LLM~\citep{achiam2023gpt4} and a text-driven diffusion model~\citep{podell2023sdxl}.
+
+\subsection{Configuration and Preliminaries}
+\myparagraph{Concepts} consist of $K$ background predicates $\mathcal{P}=\{P_i(\cdot)|i=1,\ldots,K\}$. 
+In \model{}, we can define both \textit{semantic} and \textit{spatial} predicates. For example, \texttt{IsAmbulance}$(\cdot)$ is an unary semantic predicate and \texttt{IsClose}$(\cdot, \cdot)$ is a binary spatial predicate.
+These predicates will influence the truth value of four action predicates \{\texttt{Slow}$(\cdot)$, \texttt{Normal}$(\cdot)$, \texttt{Fast}$(\cdot)$, \texttt{Stop}$(\cdot)$\} according to certain rules.
+% Note that these predicates are \textit{abstractions}, so that they will be grounded into truth values with specific agents.
+
+\myparagraph{Rules} consist of $M$ FOL clauses, $\mathcal{C}=\{C_m|m=1,\ldots,M\}$. Following ProLog syntax~\citep{kowalski1974prolog}, an FOL clause $C_m$ can be written as:
+\begin{equation*}
+    \texttt{Stop}(\texttt{X}) :- \texttt{IsClose}(\texttt{X}, \texttt{Y})~ \wedge \texttt{IsAmbulance}(\texttt{Y})~,
+\end{equation*}
+where $\texttt{Stop}(\texttt{X})$ is the \textit{head}, and the rest after ``$:-$'' is the \textit{body}.
+$\texttt{X}, \texttt{Y}$ are variables, which will be \textit{grounded} into specific entities for rule inference.
+Note that the clause implicitly declares that the variables in the \textit{head} have a universal quantifier ($\forall$) and the other variables in the \textit{body} have an existential quantifier ($\exists$).
+We assume only action predicates appear in the \textit{head}, both action and background predicates could appear in the \textit{body}. 
+
+The concepts $\mathcal{P}$ and rules $\mathcal{C}$ are \textit{abstractions}, which are not tied to specific entities.
+
+\myparagraph{Agents} serve as the \textit{entities} in the environment, which is used to \textit{ground} the \textit{abstractions}.
+We use $\mathcal{A}=\{A_n|n=1,\ldots,N\}$ to indicate all the $N$ agents in a city.
+Each agent will initially be annotated with the semantic \textit{concepts} defined in $\mathcal{P}$. For example, an ambulance car $A_1$ is annotated as $A_1 = \{\texttt{IsCar}: \texttt{True}, \texttt{IsAmbulance}: \texttt{True}, \ldots, p\}$, where $p\in\mathbb{R}$ denotes right-of-way priority. 
+
+$\mathcal{P}, \mathcal{C}, \mathcal{A}$ make up the configuration of \model{} simulation.
+A user can flexibly change any of them seamlessly without modifying the simulation and rendering process.
+
+\subsection{Simulation and Rendering}
+\label{sec:sim}
+As the simulation initialization, a static urban map $\mathbf{M}_{\mathrm{s}}\in\{0, 1\}^{W\times H\times B}$ is constructed, where
+$W, H$ denotes the width and height.
+$B$ indicates the number of static semantics in the city, \textit{e.g.}, traffic streets, walking streets, intersections, \textit{etc.}
+The agents then randomly sample collision-free start and goal locations on the map.
+These locations are fed into a search-based planner~\citep{hart1968a*} to obtain the global paths that the agents will follow to navigate themselves.
+On top of the static map, each agent will create an additional dynamic layer, indicating their latest location and planned paths.
+We use $\mathbf{M}^t\in\mathbb\{0, 1\}^{W\times H\times (B+N)}$ to denote the full semantic map with all the $N$ agents at time step $t$.
+
+During the simulation, each agent $A_n$ only has a limited field-of-view (FOV) of the overall map $\mathbf{M}^t$, which we denote $\mathbf{M}^t_n$.
+Additionally, FOV agents (self-included) in $\mathbf{M}^t_n$ is obtained and denoted as $\mathcal{A}^t_n$.
+A group of $K$ pre-defined, binary functions $\{\mathcal{F}_i(\cdot, \cdot) | i=1, \ldots, K\}$ for the $K$ predicates are then employed to obtain the \textit{grounding} $\mathbf{g}^t_n$ for the ego agent, $\mathbf{g}^t_n = \mathrm{Cat}\big(\mathcal{F}_1(\mathbf{M}^t_n, \mathcal{A}^t_n), \ldots, \mathcal{F}_K(\mathbf{M}^t_n, \mathcal{A}^t_n)\big)$.
+Here, $\mathrm{Cat}(\cdot)$ denotes concatenation.
+Assuming we have a total of $N_n$ FOV agents, $\mathbf{g}^t_n$ will be in the shape of $\{0, 1\}^{\sum_{i=1}^K N_n^{r_i}}$, where $r_i$ is the \textit{arity} for the $i$-th predicate.
+Given $\mathbf{g}^t_n$ and the rule clauses $\mathcal{C}$, we leverage an SMT solver~\citep{de2008z3} to find the truth value of the four \textit{grounded} action predicates, $\mathbf{a}_n^t=\mathrm{SMT}(\mathbf{g}^t_n, \mathcal{C})$.
+Here, $\mathbf{a}_n^t\in\{0,1\}^4$ denotes the truth value of the \textit{grounded} four action predicates for agent $A_n$ at time $t$.
+An example of this procedure for $A_1$ is provided in \fref{fig:framework}.
+After all the agents take proper actions, we move their location, update the semantic map into $\mathbf{M}^{t+1}$, and repeatedly apply the same procedure.
+Whenever an agent reaches its goal, the end position becomes the new starting point, a new goal point is randomly sampled, and the navigation is re-started.
+
+To render the binary grid map $\mathbf{M}^t$ into an RGB image $\mathbf{I}^t$ with high visual variance, we leverage foundational generative models~\citep{achiam2023gpt4,podell2023sdxl,rombach2021highresolution,meng2021sdedit}.
+We first feed the name of each \textit{semantic concept}, including different types of agents and urban elements, into GPT-4~\citep{achiam2023gpt4} and asked it to generate diverse descriptions.
+These descriptions are fed into a diffusion-based generative model~\citep{podell2023sdxl}, which creates diverse icons.
+These icons will be randomly selected and composed into the grid map landscape to render highly diverse RGB image datasets. Detailed simulation procedure is shown in~\appref{app:fps}.
+
+
+\section{\model{} Tasks}
+
+\begin{figure*}[!t]
+	\centering
+	\includegraphics[width=1\columnwidth]{imgs/fig2.pdf}
+	\caption{Demonstration of the Safe Path Following (SPF) and Visual Action Prediction (VAP) tasks in \model{}.
+    SPF emphasizes sequential decision-making while VAP focuses on one-step sophisticated reasoning on RGB inputs.
+    In the VAP task, we also display the baseline model structure.
+	}
+	\label{fig:task}
+\end{figure*}
+
+\model{} introduced above can exercise different aspects of NeSy AI.
+For example, as shown in \fref{fig:task}, we design two different tasks.
+The Safe Path Following (SPF) task aims at evaluating sequential decision-making capability while the Visual Action Prediction (VAP) task focuses on reasoning with high-dimensional data.
+Both tasks assume no direct access to the rule clauses $\mathcal{C}$.
+
+\subsection{Safe Path Following}
+SPF requires an algorithm to control an agent in LogiCity, following the global path to the goal while maximizing the trajectory return.
+The agent is expected to sequentially make a decision on the four actions based on its discrete, partial observations, which should minimize rule violation and action costs.
+In the following introduction, we assume the first agent, \textit{i.e.}, $A_1$ is the controlled agent.
+
+Specifically, the SPF task can be formulated into a Partially Observable Markov Decision Process (POMDP), which can be defined by the tuples $(S, \mathbb{A}, \Omega, T, Z, R, \gamma)$.
+The state at time $t$ is the global urban grid, together with all the agents and their conceptual attributes, $s^t = \{\mathbf{M}^t, \mathcal{A}\}\in S$.
+The action space $\mathbb{A}$ is the 4-dimensional discrete action vector $\mathbf{a}^t_1$.
+The observation at $t$-th step is the \textit{grounding} of the agent's FOV, $o^t=\mathbf{g}^t_1\in\Omega$, which can be obtained from the parsing functions $\mathcal{F}_i$.
+State transition $T(s^{t+1}|s^t, \mathbf{a}^t_1)$ is the simulation process introduced in \sref{sec:sim}.
+The observation function $Z(o^{t+1}|s^{t+1}, \mathbf{a}^t_1)$ is a deterministic cropping function.
+The reward function $R(s^t, \mathbf{a}^t_1)$ is defined as $R(s^t, \mathbf{a}^t_1) = \sum_m^M w^\mathrm{r}_m \psi(s^t, \mathbf{a}^t_1, C_m) + w^\mathrm{a}\phi(\mathbf{a}^t_1) + w^\mathrm{overtime}(t)$, where $w^\mathrm{r}_m$ is the weight of rule violation punishment for the $m-$th clause $C_m$. 
+$\psi(\cdot, \cdot, \cdot)$ evaluates if clause $C_m$ is satisfied for agent $A_1$ given $s^t$ and $\mathbf{a}^t_1$.
+$\phi(\mathbf{a}^t_1)$ indicates action cost at step $t$ and $w^\mathrm{a}$ is a normalization factor. 
+$w^\mathrm{overtime}(t)$ gives constant punishment if $t$ is larger than the max horizon.
+Finally, $\gamma$ is a discount factor set to $0.99$.
+An example of SPF is shown in \fref{fig:task} (a), where $A_1$ is the \textit{Ambulance} car in the purple box. 
+The dashed box denotes its FOV, which will be \textit{grounded} by the parsing functions. 
+A model needs to learn to sequentially output action decisions that maximize trajectory return.
+
+Compared to existing reasoning games~\citep{Maxime2023minigrid,chevalier2019babyai,machado2018atari}, LogiCity's SPF task presents two unique challenges: 
+(1) Different agent configurations $\mathcal{A}$ in training and testing cause distribution shifts in world transitions ($T$). 
+This requires the model to learn the \textit{abstractions} ($\mathcal{P}, \mathcal{C}$) for compositional generalization.
+For example, training agents could include \textit{ambulance} plus \textit{pedestrian} and \textit{police} car plus \textit{pedestrian}.
+In testing, the algorithm may need to plan with \textit{ambulance} plus \textit{police} car.
+(2) LogiCity supports more realistic multi-agent interaction. 
+For instance, if the controlled agent arrives at an intersection later than other agents, it must wait, resulting in a lower trajectory return; if it speeds up to arrive earlier, others yield, ending up with a higher score.
+This encourages learning both ego rules and world transitions with multiple agents (how to plan smartly by forecasting).
+
+\subsection{Visual Action Prediction}
+Unlike SPF, which is long-horizon and assumes access to the \textit{groundings}, the VAP task is step-wise and requires reasoning on high-dimensional data~\citep{li2020ngs,wang2019satnet}.
+As shown in \fref{fig:task} (b), inputs to VAP models include the rendered image $\mathbf{I}$ (We omit the time superscript $t$ here) and information for $N$ agents $[\mathbf{h}_1, \ldots, \mathbf{h}_N]\in\mathbb{R}^{N\times 9}$, where $\mathbf{h}_n = [x_n, y_n, w_n, h_n, \mathbf{d}_n, p]^\top$ consists of location $(x_n, y_n)$, scale $(w_n, h_n)$, one-hot direction $\mathbf{d}_n\in\mathbb{R}^4$, and normalized priority $p$. 
+During training, the models learn to reason and output the action vectors $\hat{\mathbf{a}}_n$ for all the $N$ agents with ground-truth supervision.
+During test, the models are expected to predict the actions for different sets of agents.
+
+This task is approached as a two-step graph reasoning problem~\citep{dong2019nlm,xu2018gnn}. 
+As illustrated in \fref{fig:task} (b), a grounding module first predicts interpretable \textit{grounded} predicate truth values, which are then used by a reasoning module to deduce action predicates. 
+To be more specific, a visual encoder~\citep{He2016res,lin2017fpn} first extracts global features $\mathbf{F}$ from $\mathbf{I}$.
+Agent-centric regional features are derived from ROIAlign~\citep{faster}, which resizes the image-space bounding boxes to match the feature scale and then crops the global feature using bilinear interpolation. 
+The resulting regional features for each agent, denoted as $\mathbf{f}_n$, are fed into unary prediction heads to generate unary predicate \textit{groundings}. 
+Meanwhile, binary prediction heads utilize paired agent information to predict binary predicates.
+Together, the \textit{groundings} form a scene graph $\hat{\mathbf{G}}$, which a graph reasoning engine~\citep{xu2018gnn,dong2019nlm} uses to predict actions $\hat{\mathbf{a}}_n$.
+
+Similar to the SPF task, the VAP task also features different train/test agent compositions, necessitating the model's ability to learn \textit{abstractions}.
+Additionally, unlike reasoning on structured, symbolic knowledge graphs~\citep{badreddine2022ltn,glanois2022hri,dong2019nlm}, the diverse visual appearances in LogiCity introduce high-level perceptual noise, adding an extra challenge for reasoning algorithms.
+
+
+\section{Experiments}
+\label{sec:experiments}
+\subsection{Safe Path Following}
+
+We first construct a ground-truth rule-based agent as Oracle and a Random agent as the worst baseline, showing their results in \tref{tab:spf_emp}.
+Two branches of methods are considered here, behavior cloning (BC) and reinforcement learning (RL), respectively.
+% In the BC branch, we provide $100$ trajectories from the oracle as the expert demonstration.
+% In the RL track, we train the methods for $200k$ steps and select the best checkpoints in validation episodes for testing.
+All the experiments in SPF are conducted on a single NVIDIA RTX 3090 Ti GPU with 32 AMD Ryzen 5950X 16-core processors.
+% Note that unlike the RL agents in existing games~\citep{machado2018atari} that require more exhaustive training for convergence, overly trained agents in LogiCity tends to overfit the training distribution and fail to generalize to the test distribution.
+
+\myparagraph{Baselines.} In the BC branch, we provide oracle trajectories as demonstration and consider the inductive logical programming (ILP) algorithms~\cite{cropper2021popper}, including symbolic ones~\citep{cropper2021popper,cropper2024maxsynth} and NeSy ones~\citep{glanois2022hri,dong2019nlm}.
+We also construct a multi-layer perceptron (MLP) and graph neural networks (GNN)~\citep{xu2018gnn} as the pure neural baselines.
+In the RL track, we first build neural agents using various RL algorithms, including on-policy~\citep{mnih2016a2c,schulman2017ppo}, off-policy~\citep{mnih2013dqn,dong2019nlm} model-free approaches and model-based algorithms~\citep{nagabandi2020mbrl,hafner2020dreamerv2}. 
+Since most of the existing NeSy RL methods~\citep{sen2022loa,defl2023nudge} are carefully engineered for simpler environments, we find it hard to incorporate them into our LogiCity environment.
+To introduce NeSy AI in the RL track, we develop a new Q-learning agent based on NLM~\citep{dong2019nlm}, which we denote as NLM-DQN~\citep{mnih2013dqn,dong2019nlm}.
+% To be more specific, we first leverage NLM to invent some intermediate predicates from the observed groundings.
+% These predicates are sent to the Q network and the Q-target network, which is borrowed from the standard DQN framework~\citep{mnih2013dqn}.
+% Surprisingly, this simple combination results in the strongest baseline method in RL track.
+% We build all of these methods using stable-baseline3 API~\citep{Raffin2021sb3}. 
+For more details, please see \appref{app:baseline}.
+
+\begin{table}[!t]
+    \centering
+    \setlength{\tabcolsep}{1.25mm}
+    \fontsize{7.5}{8}\selectfont
+  \caption{Empirical results of different methods in SPF task. TSR denotes trajectory success rate (most crucial) and DSR indicates decision success rate. $^\dagger$ means Popper timed out. $^\ddagger$ indicates conflict rules will be inducted for different actions. See our \href{https://jaraxxus-me.github.io/LogiCity/}{website} and \appref{app:vis} for episode visualizations.
+  % Compared with pure symbolic methods and pure neural methods, NeSy frameworks~\citep{glanois2022hri,dong2019nlm} performs better in \textit{abstract} learning.
+  % We present visualizations in \appref{app:vis}.
+  }
+  \begin{threeparttable}
+    \begin{tabular}{cc|ccc|ccc|ccc|ccc}
+    \toprule[1.5pt]
+    \multirow{2}[2]{*}{Supervision} & \multicolumn{1}{c}{Mode\textbackslash{}Model} & \multicolumn{3}{c}{Easy} & \multicolumn{3}{c}{Medium} & \multicolumn{3}{c}{Hard} & \multicolumn{3}{c}{Expert} \\
+    \cmidrule(lr){3-5} \cmidrule(lr){6-8} \cmidrule(lr){9-11} \cmidrule(lr){12-14}
+          & \multicolumn{1}{c}{Metric} & \underline{TSR} & DSR & \multicolumn{1}{c}{Score} & \underline{TSR} & DSR & \multicolumn{1}{c}{Score} & \underline{TSR} & DSR & \multicolumn{1}{c}{Score} & \underline{TSR} & DSR & Score \\
+    \midrule
+    \multirow{2}[2]{*}{N/A} & Oracle & 1.00  & 1.00  & 8.51  & 1.00  & 1.00  & 8.45  & 1.00  & 1.00  & 9.63  & 1.00  & 1.00  & 4.33 \\
+          & Random & 0.07  & 0.00  & 0.00  & 0.06  & 0.00  & 0.00  & 0.04  & 0.01  & 0.00  & 0.05  & 0.06  & 0.00 \\
+    \midrule
+    \midrule
+    \multirow{5}[2]{*}{{\makecell[c]{Behavior\\Cloning}}} & Popper~\citep{cropper2021popper} & \underline{\textbf{1.00}} & 1.00 & 8.51 & N/A$^\dagger$   & N/A$^\dagger$   & N/A$^\dagger$   & N/A$^\dagger$   & N/A$^\dagger$   & N/A$^\dagger$   & N/A$^\dagger$   & N/A$^\dagger$   & N/A$^\dagger$ \\
+          & MaxSynth~\citep{cropper2024maxsynth} & \underline{\textbf{1.00}}  & 1.00  & 8.51  & 0.25  & 0.67  & 3.18  & 0.15  & 0.60 & 2.96 & 0.09   & 0.21   & 0.37 \\
+          & HRI~\citep{glanois2022hri}   & 0.37  & 0.78  & 4.40  & \underline{\textbf{0.48}} & 0.70 & 4.75 & 0.08  & 0.15  & 0.59  & N/A$^\ddagger$   & N/A$^\ddagger$   & N/A$^\ddagger$ \\
+          & NLM~\citep{dong2019nlm}   & 0.75  & 1.00  & 7.29  & 0.30  & 0.67  & 3.24  & \underline{\textbf{0.24}} & 0.27  & 2.00  & \underline{\textbf{0.22}} & 0.38 & 0.99 \\
+          & GNN~\citep{xu2018gnn}   & 0.26  & 0.39  & 2.58  & 0.17  & 0.24  & 1.31  & 0.19 & 0.39  & 2.19  & 0.19 & 0.32 & 0.84 \\
+          & MLP   & 0.61  & 0.63  & 4.80  & 0.20  & 0.19  & 1.22  & 0.12  & 0.13  & 0.81  & 0.10  & 0.19  & 0.25 \\
+    \midrule
+    \midrule
+    \multirow{6}[2]{*}{{\makecell[c]{Reinforcement\\Learning}}} & NLM-DQN~\citep{dong2019nlm,mnih2013dqn} & \underline{\textbf{0.53}} & 0.96 & 5.93 & \underline{\textbf{0.47}} & 0.67 & 4.40 & \underline{\textbf{0.29}} & 0.40 & 2.69 & \underline{\textbf{0.15}} & 0.35 & 0.62 \\
+          & MB-shooting~\citep{nagabandi2020mbrl} & 0.24  & 0.44  & 2.55  & 0.20  & 0.17  & 1.18  & 0.16  & 0.17  & 1.26  & 0.13  & 0.11  & 0.37 \\
+          & DreamerV2~\citep{hafner2020dreamerv2} & 0.07  & 0.43  & 2.86  & 0.02  & 0.21  & 0.67  & 0.00  & 0.30  & 1.45  & 0.12  & 0.06  & 0.41 \\
+          & DQN~\citep{mnih2013dqn}   & 0.35  & 0.89  & 4.80  & 0.42  & 0.59  & 3.72  & 0.09  & 0.12  & 0.63  & 0.07  & 0.24  & 0.37 \\
+          & PPO~\citep{schulman2017ppo}   & 0.33  & 0.36  & 2.83  & 0.09  & 0.25  & 0.88  & 0.02  & 0.38  & 1.57  & 0.12  & 0.08  & 0.38 \\
+          & A2C~\citep{mnih2016a2c}   & 0.10  & 0.16  & 1.00  & 0.06  & 0.29  & 1.07  & 0.00  & 0.14  & 0.46  & 0.12  & 0.09  & 0.34 \\
+    \bottomrule[1.5pt]
+    \end{tabular}%
+  \label{tab:spf_emp}%
+\end{threeparttable}
+\end{table}%
+
+\begin{figure*}[!t]
+  \centering
+  \begin{minipage}[b]{0.48\columnwidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/fig3.pdf}
+    \caption{Results for different agent configurations in medium and hard modes of SPF task. We report the average of DSR and TSR here.}
+    \label{fig:fig3}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.48\columnwidth}
+    \centering
+    \includegraphics[width=\linewidth]{imgs/fig4.pdf}
+    \caption{Continual learning results for MLP and NLM~\citep{dong2019nlm}. The results achieved by training from scratch are reported in dashed lines. }
+    \label{fig:fig4}
+  \end{minipage}
+\end{figure*}
+
+\myparagraph{Modes and Datasets.}
+As shown in \tref{tab:spf_emp}, we provide four modes in the SPF task, namely easy, medium, hard, and expert.
+% Across all modes, we fix the (maximum) number of FOV agents into 5, \textit{i.e.}, $\Tilde{N}_1=5$.
+% Easy mode includes 7 unary and 2 binary predicates, resulting in an $\sum^K_i \Tilde{N}^{r_i}_1=85$ dimensional grounding vector. 
+% Rules involve only \textit{spatial} concepts and constrain the \texttt{Stop} action.
+% Medium mode features $8$ unary predicates and $4$ binary predicates, creating a $\sum^K_i \Tilde{N}^{r_i}_1=140$ dimensional grounding vector. 
+% The medium rule sets is extended from the easy mode.
+% and incorporate both \textit{spatial} and \textit{semantic} concepts, constraining the \texttt{Stop} action.
+% Hard mode contains $11$ unary predicates and $6$ binary predicates, yielding a $\sum^K_i \Tilde{N}^{r_i}_1=205$ dimensional grounding vector. 
+% Rules cover all \textit{spatial} and \textit{semantic} concepts and constrain the \texttt{Stop} action.
+From easy to medium to hard mode, we progressively introduce more \textit{concepts} and more complex rules, constraining only \texttt{Stop} action.
+The expert mode constrains all four actions with the most complex rule sets.
+% We provide standard training/validation/test agent configurations and validation/test episodes for all the modes.
+% The training agents cover all the necessary concepts in the rules, while validation and test agents are different and more complex.
+% For each mode, we collect $40$ validation episodes and $100$ test episodes using corresponding agent distribution, making sure the episodes cover all the \textit{concepts} and actions.
+More details are included in \appref{app:task}.
+% More details about the ontology and rules see the appendix.
+
+\myparagraph{Metrics.}
+We consider three metrics in this task.
+Trajectory Success Rate (TSR) evaluates if an agent can reach its goal within the allotted time. It is defined as $\mathrm{TSR} = \frac{\sum^{T^{\mathrm{all}}}_i \mathrm{Succ}_i}{T^{\mathrm{all}}}$, where $T^{\mathrm{all}}$ is the total number of episodes, and $\mathrm{Succ}_i=1$ if the $i$-th episode is completed within twice the oracle steps without rule violations, and $\mathrm{Succ}_i=0$ otherwise.
+Decision Success Rate (DSR) assesses if an agent adheres to all rules. It is defined as $\mathrm{DSR} = \frac{\sum^{T^{\mathrm{all}}}_i \mathrm{Dec}_i}{T^{\mathrm{all}}}$, where $\mathrm{Dec}_i=1$ if the $i$-th episode has at least one rule-constrained step and the agent does not violate any rules throughout, regardless of task completion, and $\mathrm{Dec}_i=0$ otherwise.
+The score metric is the averaged trajectory return over all episodes minus the return of a random agent.
+Among them, TSR is the most crucial.
+
+\subsubsection{Empirical Evaluation}
+We present the empirical results in \tref{tab:spf_emp}, showing LogiCity's ability to vary reasoning complexity. 
+In the BC track, symbolic methods~\citep{cropper2021popper,cropper2024maxsynth} perform well in the \textit{easy} mode but struggle with more complex scenarios from the \textit{medium} mode. 
+NeSy rule induction methods~\citep{glanois2022hri,dong2019nlm} outperform pure neural MLP/GNN approaches.
+In the RL track, off-policy methods~\citep{mnih2013dqn,nagabandi2020mbrl,hafner2020dreamerv2,dong2019nlm} are more stable and effective than on-policy methods~\citep{schulman2017ppo,mnih2016a2c} due to the high variance in training episodes affecting policy learning. 
+Additionally, NeSy framework~\citep{dong2019nlm,mnih2013dqn} outperform pure neural agents~\citep{nagabandi2020mbrl,mnih2013dqn} by finding better representations from \textit{abstract} observations.
+To illustrate the compositional challenge in LogiCity, we compare results across different agent sets in \fref{fig:fig3}. Models trained on the training agent configuration show significant performance drops when transferred to test agents, but NeSy methods~\citep{dong2019nlm,mnih2013dqn} are less affected. 
+% The SPF task provides \textit{grounded} predicates as observations, which can be 
+We discuss more observation spaces in \appref{app:ssc}.
+
+\subsubsection{Continual Learning}\label{sec:spf_cl}
+Using LogiCity, we also examine how much data different models need to continually learn new \textit{abstract} rules. 
+% To focus on rule transfer, we created a Medium$^*$ mode, which uses the same agents as the \textit{easy} mode but rules from the \textit{medium} mode.
+% Note that the \textit{medium} mode rule set is a superset of the \textit{easy} mode.
+We initialize models with the converged weights from \textit{easy} mode and progressively provide data from \textit{medium} mode rules. 
+The results from three random runs for MLP and NLM~\citep{dong2019nlm} are shown in \fref{fig:fig4}, alongside results from models trained from scratch. 
+NLM reaches the best result with 30\% of the target domain data, demonstrating superior continual learning capabilities. 
+
+\begin{table}[!t]
+    \centering
+    \setlength{\tabcolsep}{1.25mm}
+    \fontsize{7.5}{8}\selectfont
+  \caption{Empirical results of different methods and settings in VAP task (Modular is more crucial). 
+  We report the recall rate for each action, averaged accuracy (aAcc.), and weighted accuracy (wAcc.). 
+  % We observe that though GNN~\citep{xu2018gnn} shows better performance in easy mode, it falls short in hard mode compared to NLM~\citep{dong2019nlm}.
+  }
+  \begin{threeparttable}
+    \begin{tabular}{ccc|ccccc|cccccc}
+    \toprule[1.5pt]
+    \multicolumn{3}{c|}{Mode} & \multicolumn{5}{c|}{Easy}             & \multicolumn{6}{c}{Hard} \\
+    \multicolumn{3}{c|}{Num. Actions} & 3042  & 3978  & 7220  & -     & -     & 4155  & 2882  & 715   & 6488  & -     & - \\
+    Supervision & Config & Model & Slow  & Normal & Stop  & aAcc. & wAcc.  & Slow  & Normal & Fast  & Stop  & aAcc. & wAcc. \\
+    \midrule
+
+    \multirow{4}[2]{*}{\underline{Modular}} & \multirow{2}[1]{*}{Fixed} & GNN~\citep{xu2018gnn}   & 0.45  & 0.63  & 0.54  & 0.54  & \underline{\textbf{0.53}} & 0.44  & 0.47  & 0.09  & 0.57  & 0.49  & 0.23 \\
+          &       & NLM~\citep{dong2019nlm}   & 0.31  & 0.57  & 0.75  & 0.61  & 0.49  & 0.39  & 0.54  & 0.11  & 0.48  & 0.45  & \underline{\textbf{0.24}} \\
+          & \multirow{2}[1]{*}{Random} & GNN~\citep{xu2018gnn}   & 0.52  & 0.63  & 0.43  & 0.51  & 0.54  & 0.26  & 0.51  & 0.19  & 0.63  & 0.48  & 0.28 \\
+          &       & NLM~\citep{dong2019nlm}   & 0.54  & 0.53  & 0.67  & 0.60  & \underline{\textbf{0.56}} & 0.15  & 0.41  & 0.35  & 0.57  & 0.41  & \underline{\textbf{0.36}} \\
+    \midrule
+    \midrule
+    \multirow{4}[2]{*}{E2E} & \multirow{2}[1]{*}{Fixed} & GNN~\citep{xu2018gnn}   & 0.76  & 0.69  & 0.98  & 0.85  & \textbf{0.78} & 0.46  & 0.62  & 0.27  & 0.99  & 0.72  & 0.40 \\
+          &       & NLM~\citep{dong2019nlm}   & 0.78  & 0.47  & 1.00  & 0.83  & 0.71  & 0.33  & 0.69  & 0.37  & 1.00  & 0.71  & \textbf{0.46} \\
+          & \multirow{2}[1]{*}{Random} & GNN~\citep{xu2018gnn}   & 0.88  & 0.64  & 1.00  & 0.87  & \textbf{0.82} & 0.14  & 0.66  & 0.52  & 1.00  & 0.65  & \textbf{0.54} \\
+          &       & NLM~\citep{dong2019nlm}   & 0.90  & 0.53  & 1.00  & 0.85  & 0.79  & 0.25  & 0.67  & 0.45  & 1.00  & 0.69  & 0.50 \\
+    \bottomrule[1.5pt]
+    \end{tabular}%
+  \label{tab:vap_emp}%
+\end{threeparttable}
+\end{table}%
+
+\begin{figure*}[!t]
+	\centering
+	\includegraphics[width=0.98\columnwidth]{imgs/fig6.pdf}
+	\caption{Diverse renderings from \model{}. Note that every city has distinct agent compositions.
+	}
+	\label{fig:vis}
+\end{figure*}
+
+\subsection{Visual Action Prediction}
+
+\myparagraph{Baselines.} As there exists very limited literature~\citep{yang2022logicdef} studying FOL reasoning on RGB images, we self-construct two baselines using GNN~\citep{xu2018gnn} and NLM~\citep{dong2019nlm} as the reasoning engine, respectively.
+For fairness, we use the same visual encoder~\citep{He2016res,lin2017fpn} and hyperparameter configurations.
+We train and test all the models on a single NVIDIA H100 GPU. See \appref{app:baseline} for more details.
+
+\looseness = -1
+\myparagraph{Settings.} We explore four distinct training settings for the two methods. 
+Regarding supervision signals, modular supervision offers ground truth for both scene graphs and final actions, training the two modules separately. 
+This setting requires interpretable meanings of the scene graph elements, which is crucial.
+We also explore end-to-end supervision (E2E), which provides guidance only on the final actions.
+For the training agent sets, we experiment with both fixed and random settings. 
+
+\myparagraph{Modes and Datasets.}
+We present two modes for VAP task, namely \textit{easy} and \textit{hard}.
+In \textit{easy} mode, rules constrain only \texttt{Slow} and \texttt{Stop} actions with few \textit{concepts}. The \textit{hard} mode includes the \textit{easy} \textit{abstractions} and additional constraints for all four actions, with a natural data imbalance making the \texttt{Fast} action rarer. 
+We display some examples in \fref{fig:vis}.
+More details are included in \appref{app:task}.
+
+\myparagraph{Metrics.}
+We first report the action-wise recall rate (true positives divided by the number of samples). 
+The average accuracy (aAcc.) is the correct prediction rate across all the test samples. 
+To highlight the data imbalance issue, we also introduce weighted accuracy (wAcc.), defined as $\mathrm{wAcc.} = \frac{\sum_\texttt{a} \mathrm{Recall}^\texttt{a}/N^\texttt{a}}{\sum_\texttt{a} \frac{1}{N^\texttt{a}}}$, where $\mathrm{Recall}^\texttt{a}$ is the recall rate for action $\texttt{a}$ and $N^\texttt{a}$ is the number of samples for action $\texttt{a}$. 
+This metric assigns larger weights to less frequent actions.
+\subsubsection{Empirical Evaluation}
+The empirical results for the VAP task are shown in \tref{tab:vap_emp}, highlighting LogiCity's ability to adjust reasoning complexity. 
+We observe that while GNN~\citep{xu2018gnn} slightly outperforms NLM~\citep{dong2019nlm} in the \textit{easy} mode, NLM excels in the \textit{hard} mode. 
+We also find that random agent configurations improve the performance of both methods.
+The data imbalance poses an additional challenge, with the \texttt{Stop} action having $2\times \sim 6\times$ higher recall than the \texttt{Fast} action. 
+Besides, the modular setting proves more challenging than the end-to-end (E2E) setting, as the modular system is more sensitive to perceptual noise. 
+We further investigate this issue quantitatively in \appref{app:qpn}.
+
+\begin{figure*}[!t]
+	\centering
+	\includegraphics[width=0.9\columnwidth]{imgs/fig5.pdf}
+	\caption{Continual learning results of GNN~\citep{xu2018gnn} and NLM~\citep{dong2019nlm} in the VAP task. The mean results from three random runs are displayed in solid lines and the variance is reported as the semi-transparent regions. We also show the results of the models trained from scratch using 100\% data in dashed lines.
+	}
+	\label{fig:vis_tl}
+\end{figure*}
+
+\subsubsection{Continual Learning}
+Similar to the SPF task, we investigate how much data the methods need to continually learn abstract rules in the VAP task.
+The models pre-trained in \textit{easy} mode are used as the initial weights, which are continually trained with different sets of data from the \textit{hard} mode.
+The data are sampled for 3 times and the mean and variance of the results are reported in \fref{fig:vis_tl}, where we also report the results from the models trained with 100\% data from scratch as dashed lines (``upper bound'').
+We observe that the two methods could struggle to reach their ``upper bound'' if fixed training agents are used.
+For the random agent setting, NLM~\citep{dong2019nlm} could progressively learn new rules and reach its ``upper bound" with around 50\% data while GNN fails even with 100\% data.
+
+\subsubsection{How Do LLMs and Human Perform in LogiCity?}
+
+Recent years have witnessed the increasing use of LLMs for decision making \cite{sumers2024cognitive,yao2023tree,li2024embodied, zhai2024fine}, concept understanding \cite{rajendran2024learning,luo2024pace,jeong2024llmselectfeatureselectionlarge}, and logical reasoning \cite{Hu2023ChatDBAL,han2022folio,pan2023logiclm,Sun_2024}. 
+In this section, we investigate the capability of LLMs~\citep{achiam2023gpt4} and Human to solve the (subset of) VAP task in LogiCity through in-context demonstrations.
+Since we focus only on logical reasoning, true \textit{groundings} are provided in natural language documents without perceptual noise.
+Specifically, we first convert every scene (frame) into a paragraph of natural language description (see \fref{fig:incontex} for examples).
+For each entity within the frame, given the scene descriptions, we ask LLMs to decide its next action from options (``A. Slow'', ``B. Normal'', ``C. Fast'', ``D. Stop'').
+Since the entire test set of VAP is huge, we randomly selected a ``Mini" test with 117 questions about the concept $\texttt{IsTiro}$ and $\texttt{IsReckless}$.
+To construct demonstrations for in-context learning, we randomly choose 5-shot samples from the training document used by human participants\footnote{Since human are able to learn from more samples without the context window limitation, they have read more training documents than LLMs for a more comprehensive understanding of LogiCity.} and provide question-answer pairs.
+The performance of Human, \texttt{gpt-4o} (GPT-4o), \texttt{gpt-4o-mini} (GPT-4o mini), \texttt{gpt-4-turbo-2024-04-09} (GPT-4), and \texttt{gpt-3.5-turbo-1106} (GPT-3.5) on VAP hard mode test sets are reported in \tref{tab:llm}, where the random sampling results for options are also provided for reference.
+Based on experts' evaluation, we also display the ``hardness" of correctly answering each of the choice, where $^{\dagger}$, $^{\dagger\dagger}$, and $^{\dagger\dagger\dagger}$ denote ``easy", ``medium", and ``hard".
+
+\begin{wraptable}{r}{0.49\columnwidth}
+\vspace{-0.55cm}
+    \setlength{\tabcolsep}{1.1mm}
+    \fontsize{7.5}{9}\selectfont
+    \caption{Action prediction accuracy of different LLMs in the VAP task hard mode. $^{\dagger}$, $^{\dagger\dagger}$, and $^{\dagger\dagger\dagger}$ denote different logical reasoning hardness.}
+        \begin{center}
+            \begin{tabular}{cccccc}
+            \toprule[1pt]
+            Method & Slow$^{\dagger\dagger}$  & Normal$^{\dagger\dagger}$ & Fast$^{\dagger}$ & Stop$^{\dagger\dagger\dagger}$ & Overall \\
+            \midrule
+            Human & \textbf{95.0} & \textbf{92.9} & 48.0 & \textbf{83.3} & \textbf{81.2} \\
+            GPT-4o  & 20.0 & 84.1 & 80.0 & 32.2 & 59.0 \\
+            GPT-4  & 75.0 & 57.9 & 25.3 & 2.2 & 39.6 \\
+            GPT-3.5  & 0.0 & 82.5 & 16.0 & 0.0 & 33.0 \\
+            GPT-4o mini  & 0.0 & 2.4 & \textbf{86.7} & 40.0 & 29.6 \\
+            Random & 21.0 & 23.8 & 28.8 & 27.3 & 25.3 \\
+            \bottomrule[1pt]
+            \end{tabular}%
+            \label{tab:llm}
+        \end{center}
+        \vspace{-0.4cm}
+\end{wraptable}
+
+We observe that the latest GPT-4o shows significantly better in-context learning capability than previous GPT-4 and GPT-3.5, surpassing them by over 20\% in terms of overall accuracy.
+The results also demonstrate the importance of model scale for reasoning task, where GPT-4o mini falls far behind GPT-4o.
+However, it is still far from the inductive logical reasoning capability of Human, especially for harder reasoning choices like ``Stop".
+Interestingly, the distribution of the decisions demonstrates that GPT-4 has a strong bias towards a conservative decision, which tends to predict ``Slow'' action.
+GPT-4o is better at reasoning in the context, yet they still tend to use common sense knowledge (\textit{e.g.}, Reckless cars always drive fast).
+In contrast, human participants tend to learn LogiCity’s rules through formal verification, where hypotheses are verified and refined based on training documents.
+Yet, due to the challenging nature of logical induction, human has made mistakes in learning rules of ``Stop" (they concluded more general rules than GT), which affects the accuracy of ``Fast".
+This suggests a promising future research direction that could involve coupling LLMs with a formal inductive logical reasoner~\citep{cropper2024maxsynth,cropper2021popper}, creating a generation-verification loop.
+Another intriguing direction is using the LogiCity dataset to conduct Direct Preference Optimization (DPO)~\citep{rafailov2024dpo}.
+
+% \subsection{Visualization}
+
+\section{Discussions}
+\myparagraph{Conclusion.}
+This work presents LogiCity, a new simulator and benchmark for the NeSy AI community, featuring a dynamic urban environment with various \textit{abstractions}.
+LogiCity allows for flexible configuration on the \textit{concepts} and FOL rules, thus supporting the customization of logical reasoning complexity.
+Using the LogiCity simulator, we present sequential decision-making and visual reasoning tasks, both emphasizing \textit{abstract} reasoning.
+The former task is designed for a long-horizon, multi-agent interaction scenario while the latter focuses on reasoning with perceptual noise.
+With exhaustive experiments on various baselines, we show that NeSy frameworks~\citep{dong2019nlm,glanois2022hri} can learn \textit{abstractions} better, and are thus more capable of the compositional generalization tests.
+Yet, \model{} also demonstrates the challenge of learning \textit{abstractions} for all current methods, especially when the reasoning becomes more complex.
+Specifically, we highlight the crucial difficulty of long-horizon \textit{abstract} reasoning with multiple agents and that \textit{abstract} reasoning with high dimensional data remains hard.
+On the one hand, \model{} poses a significant challenge for existing approaches with sophisticated reasoning scenarios.
+On the other hand, it allows for the gradual development of the next-generation NeSy AI by providing a flexible environment.
+
+\looseness = -1
+\myparagraph{Limitations and Social Impact.}
+\label{sec:limitation}
+One limitation of our simulator is the need for users to pre-define rule sets that are conflict-free and do not cause deadlocks. 
+Future work could involve distilling real-world data into configurations for LogiCity, streamlining this definition process. 
+Currently, LogiCity does not support temporal logic~\citep{xie2019lensr}; incorporating temporal constraints on agent behaviors is intriguing. 
+The simulation in LogiCity is deterministic, introducing randomness through fuzzy logic deduction engines~\citep{riegel2020lnn,tran2016deepprob} could be interesting.
+For the autonomous driving community~\citep{highway-env,dosovitskiy2017carla}, LogiCity introduces more various \textit{concepts}, requiring a model to plan with \textit{abstractions}, thus addressing a new aspect of real-life challenges. 
+Enhancing the map of \model{} and expanding the action space could make our simulator a valuable test bed for them.
+Additionally, since the ontologies and rules in LogiCity can be easily converted into Planning Definite Domain Language (PDDL), LogiCity has potential applications in \textit{multi-agent} task and motion planning~\citep{chitnis2022nsrt,silver2022nsskill}.
+A potential negative social impact is that rules in \model{} may not accurately reflect our real life, introducing sim-to-real gap.
+
+\section*{Acknowledgment}
+We acknowledge the support of the Air Force Research Laboratory (AFRL), DARPA, under agreement number FA8750-23-2-1015.
+This work used Bridges-2 at PSC through allocation cis220039p from the Advanced Cyberinfrastructure Coordination Ecosystem: Services \& Support (ACCESS) program which is supported by NSF grants \#2138259, \#2138286, \#2138307, \#2137603, and \#213296.
+This work was also supported, in part, by Individual Discovery Grants from the Natural Sciences and Engineering Research Council of Canada, and the Canada CIFAR AI Chair Program.
+We thank the Microsoft Accelerating Foundation Models Research (AFMR) program for providing generous support of Azure credits. 
+We express sincere gratitude to all the human participants for their valuable time and intelligence devotion in the this research.
+The authors would also like to express sincere gratitude to Jiayuan Mao (MIT), Dr. Patrick Emami (NREL), and Dr. Peter Graf (NREL) for their valuable feedback and suggestions on the early draft of this work.
+
+\newpage
+
+{\small
+\bibliography{ref.bib}
+\bibliographystyle{IEEEtran}
+% \bibliographystyle{plain}
+}
+
+\section*{Checklist}
+
+\begin{enumerate}
+
+\item For all authors...
+\begin{enumerate}
+  \item Do the main claims made in the abstract and introduction accurately reflect the paper's contributions and scope?
+    \answerYes{}, the claims made in the abstract and introduction accurately reflect the paper's contributions and scope.
+  \item Did you describe the limitations of your work?
+    \answerYes{}, the limitations are discussed in \sref{sec:limitation}.
+  \item Did you discuss any potential negative societal impacts of your work?
+    \answerYes{}, the potential negative societal impacts are discussed in \sref{sec:limitation}.
+  \item Have you read the ethics review guidelines and ensured that your paper conforms to them?
+    \answerYes{}, our paper conforms to the ethics review guidelines.
+\end{enumerate}
+
+\item If you are including theoretical results...
+\begin{enumerate}
+  \item Did you state the full set of assumptions of all theoretical results?
+    \answerNA{}, our paper does not include theoretical results.
+	\item Did you include complete proofs of all theoretical results?
+    \answerNA{}, our paper does not include theoretical results.
+\end{enumerate}
+
+\item If you ran experiments (e.g. for benchmarks)...
+\begin{enumerate}
+  \item Did you include the code, data, and instructions needed to reproduce the main experimental results (either in the supplemental material or as a URL)?
+    \answerYes{}, the code, data, and instructions are fully open sourced in our website (link in abstract).
+  \item Did you specify all the training details (e.g., data splits, hyperparameters, how they were chosen)?
+    \answerYes{}, the training details can be found at \appref{app:baseline} and our code library.
+	\item Did you report error bars (e.g., with respect to the random seed after running experiments multiple times)?
+    \answerYes{}, in continual learning experiments, we report mean and variance of three random runs.
+	\item Did you include the total amount of compute and the type of resources used (e.g., type of GPUs, internal cluster, or cloud provider)?
+    \answerYes{}, hardware information is included in \sref{sec:experiments}.
+\end{enumerate}
+
+\item If you are using existing assets (e.g., code, data, models) or curating/releasing new assets...
+\begin{enumerate}
+  \item If your work uses existing assets, did you cite the creators?
+    \answerNA{}, our work does not use existing assets.
+  \item Did you mention the license of the assets?
+    \answerNA{}, our work does not use existing assets.
+  \item Did you include any new assets either in the supplemental material or as a URL?
+    \answerYes{}, new assets are in our website.
+  \item Did you discuss whether and how consent was obtained from people whose data you're using/curating?
+    \answerNA{}, the data are purely synthetic.
+  \item Did you discuss whether the data you are using/curating contains personally identifiable information or offensive content?
+    \answerNA{}, the data does not contain personally identifiable information or offensive content.
+\end{enumerate}
+
+\item If you used crowdsourcing or conducted research with human subjects...
+\begin{enumerate}
+  \item Did you include the full text of instructions given to participants and screenshots, if applicable?
+    \answerYes{}, We have included the full text of instructions given to participants and screenshots.
+  \item Did you describe any potential participant risks, with links to Institutional Review Board (IRB) approvals, if applicable?
+    \answerYes{}, we have described the potential participant risks, with links to Institutional Review Board (IRB) approvals.
+  \item Did you include the estimated hourly wage paid to participants and the total amount spent on participant compensation?
+    \answerYes{}, the human participants received an hourly wage of $15\$$.
+\end{enumerate}
+
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\newpage
+
+\appendix
+\setcounter{table}{0}
+\renewcommand{\thetable}{\Alph{table}}
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{\Alph{figure}}
+\setcounter{section}{0}
+\renewcommand{\thesection}{\Alph{section}}
+
+% \section*{Supplementary}
+
+
+\section{Detailed Baseline Configurations}\label{app:baseline}
+To make our experiments reproducible, we provided detailed baseline introductions and configurations below.
+For more details, please refer to our code base.
+
+\subsection{Safe Path Following}
+In the BC branch, we have considered ILP methods~\citep{cropper2021popper,cropper2024maxsynth}, including both symbolic ones~\citep{cropper2021popper,cropper2024maxsynth} and NeSy ones~\citep{glanois2022hri,dong2019nlm}.
+For them, we convert the demonstration trajectories (step-wise truth value of all the predicates) into \textit{facts} and conduct rule learning.
+Popper~\cite{cropper2021popper} is one of the most performant search-based rule induction algorithm, which uses failure samples to construct hyposithes spaces via answer set programming. 
+It shows better scaling capability than previous template based methods~\citep{evans2018pilp}. 
+Since Popper is a greedy approach, it usually costs too much time searching. 
+Maxsynth~\citep{cropper2024maxsynth} relax this greedy setting and aims at finding rules in noisy data via anytime solvers.
+In our experiments, we set $300$ seconds (averaged training time for other methods) as the maximum search time for Popper and Maxsynth.
+For all the other parameters, official default settings are used for fairness.
+HRI~\citep{glanois2022hri} is a hierachical rule induction framework, which utilizes neural tensors to represent predicates and searches the explicit rules by finding paths between predicates.
+For different modes in LogiCity, we provided the number of background predicates as HRI initialization.
+All the other parameter settings are kept the same as the original implementation.
+When constructing the scene graph, we make sure the ratio of positive and negative samples is 1:1.
+For the other
+NLM~\citep{dong2019nlm} is an implicity rule induction method, which proposed a FOL-inspired network structure. 
+The learnt rules are implicity stored in the network weights.
+For different modes in LogiCity, we provided the number of background predicates as NLM initialization.
+Across different modes, we used the same hyperparameters, \textit{i.e.}, the output dimension of each layer is set to $8$, the maximum depth is set to $4$, and the breadth is $3$.
+For the baselines above, we used their official optimizer during training.
+In addition, we constructed pure neural baselines, including an MLP and a GNN~\citep{xu2018gnn}, both having two hidden layers with ReLU activations.
+In the easy and medium modes, the dimensions of the hidden layers are $128 \times 64$ and $64 \times 64$.
+In the hard and expert modes, the dimensions of the hidden layers are $128 \times 64$ and $64 \times 128$.
+These self-constructed baselines are trained with Adam optimizer~\citep{kingma2014adam}.
+For more details, please refer to our open-sourced code library.
+
+In the RL branch, we first build neural agents using different algorithms, which are learnt by interaction with the environment.
+A2C~\citep{mnih2016a2c} is a synchronous, deterministic variant of Asynchronous Advantage Actor Critic (A3C)~\citep{mnih2016a2c}, which is an on-policy framework.
+It leverages multiple workers to replace the use of replay buffer.
+Proximal Policy Optimization (PPO) combines the idea in A2C and the trust region optimization in TRPO~\citep{schulman2015trpo}.
+Different from these policy gradient-based methods, Deep Q network (DQN)~\citep{mnih2013dqn} is an off-policy value-based approach, which has been one of the state-of-the-arts in Atari Games~\citep{machado2018atari}.
+For these three baselines, we used a two-layer MLP as the feature extractor, which has the same structure as the MLP baseline in the BC branch.
+All the other configurations are borrowed from stable-baselines3~\citep{Raffin2021sb3}.
+In addition to these model-free agents, we also considered model-based approaches~\citep{nagabandi2020mbrl,hafner2020dreamerv2}.
+MB-shooting~\citep{nagabandi2020mbrl} uses the learnt world model to evaluate the randomly sampled future trajectories.
+In our experiments, we used an ensemble of $50$ MLPs (with the same structure as above) as the dynamics model.
+The reward prediction is modeled as a regression problem while the state prediction is a classification problem.
+During inference, we sample a total of $100$ random action sequences with a horizon of $10$.
+DreamerV2~\citep{hafner2020dreamerv2} is a more advanced model-based method, which introduced discrete distribution in the latent world representation.
+We find the official implementation for Atari games~\citep{hafner2020dreamerv2} is hard to work for LogiCity. 
+Therefore, we have tried our best to carefully tune the parameters, which can be found in our code library.
+Additionally, we built a NeSy agent~\citep{dong2019nlm} based on DQN~\citep{mnih2013dqn}, named as NLM-DQN, which we show the detailed structure in \fref{fig:nlmdqn}.
+The observed \textit{groundings} is first reshaped into a list of predicates, which is fed into NLM to obtain the invented ($8$) new predicates.
+Since we are learning ego policy (for the first entity), the first axis of the feature is extracted as the truth value grounded to the ego entity.
+Then, similar to the vanilla DQN, we construct two MLPs to estimate the current Q value and the next Q value, which, together with the current reward, are used to update the model based on Bellman Equation.
+Despite its simple structure, NLM-DQN has been demonstrated as the most performant baseline in LogiCity SPF task RL branch, showcasing the power of NeSy in terms of complicated abstract reasoning.
+All the baselines in the RL branch are trained for a total of $200k$ steps in the training environment, the most performant checkpoints in validation environment is utilized for testing.
+Note that this is different from existing gaming environments~\citep{machado2018atari,vinyals2017starcraft,fan2022minedojo}, where train/val/test environments have very limited distribution shift.
+
+
+\subsection{Visual Action Prediction}
+In the VAP task, we built two baseline models with similar structure, namely GNN~\citep{xu2018gnn} and NLM~\citep{dong2019nlm}.
+Across the two models, we used the same grounding framework.
+Specifically, ResNet50~\citep{He2016res} plus Feature Pyramid Network (FPN)~\citep{lin2017fpn} pre-trained on ImageNet~\citep{deng2009imagenet} is leveraged as the feature encoder.
+After ROIAlign~\citep{faster}, the resulting regional features are in the shape of $\mathbb{R}^{512}$.
+The unary predicate heads are three-layer MLPs with BatchNorm1D, ReLU, and Dropout functions.
+Note that the unary predicates are all about the regional feature, requiring no additional information $\mathbf{h}$.
+On the other hand, the binary predicates are all about the additional information.
+We first concatinate the information $\mathbf{h}$ for each pair of entities and used two-layer MLPs to predicate the truth values of binary predicates.
+For details about the structure of the MLPs, please see our code library.
+The truth values of unary and binary predicates form a scene graph for the reasoning networks~\citep{xu2018gnn,dong2019nlm} to predict actions.
+For GNN~\citep{xu2018gnn}, we used a hidden layer in the dimension of $128$.
+For NLM~\citep{dong2019nlm}, we employed official implementation, where each logic layer invents $8$ new attributes, the maximum depth is set to $4$ and the breadth is set to $3$.
+In the end-to-end setting, both methods are trained using AdamW~\citep{loshchilov2018adamw}.
+In the modular setting, the grounding module is trained using Adam~\citep{kingma2014adam} while the reasoning module is optimized using AdamW~\citep{loshchilov2018adamw}.
+For all the experiments, we train the models for $30$ epochs and test the best performing checkpoint in the validation set.
+Note that these settings are the same in the two modes of VAP task.
+
+
+
+\begin{figure*}[!t]
+	\centering
+	\includegraphics[width=0.9\columnwidth]{imgs/nlmdqn.pdf}
+	\caption{Model structure of NLM-DQN~\citep{dong2019nlm,mnih2013dqn}. We display the feature dimension for the hard mode for reference.
+	}
+	\label{fig:nlmdqn}
+\end{figure*}
+
+\section{Detailed Task Configurations}\label{app:task}
+The full list of predicates and rules and their descriptions are displayed in \tref{tab:predicates} and \tref{tab:rules}, respectively.
+Across different modes in the two tasks, the involved predicates and rule clauses are the subsets of these full lists.
+We introduce the detailed configurations below.
+
+\begin{table}[!t]
+    \centering
+    \setlength{\tabcolsep}{0.9mm}
+    \fontsize{7.5}{8}\selectfont
+  \caption{All the predicates in LogiCity. We also display which parts of them are involved in each mode of the two tasks.
+  }
+  \begin{threeparttable}
+    \begin{tabular}{ccc|cccc|cc}
+    \toprule[1pt]
+    \multicolumn{3}{c|}{Task} & \multicolumn{4}{c|}{SPF}      & \multicolumn{2}{c}{VAP} \\
+    Predicates & Arity & Description & Easy  & Medium & Hard  & Expert & Easy  & Hard \\
+    \midrule
+    \texttt{IsPedestrian(X)} & 1 & Checks if entity \texttt{X} is a pedestrian. & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \texttt{IsCar(X)} & 1 & Checks if entity \texttt{X} is a car. & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \texttt{IsAmbulance(X)} & 1 & Checks if entity \texttt{X} is an ambulance. & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \texttt{IsBus(X)} & 1 & Checks if entity \texttt{X} is a bus. & \ding{55} & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \texttt{IsPolice(X)} & 1 & Checks if entity \texttt{X} is a police vehicle. & \ding{55} & \ding{55} & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \texttt{IsTiro(X)} & 1 & Checks if entity \texttt{X} is a tiro. & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \texttt{IsReckless(X)} & 1 & Checks if entity \texttt{X} is reckless. & \ding{55} & \ding{55} & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \texttt{IsOld(X)} & 1 & Checks if entity \texttt{X} is old. & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \texttt{IsYoung(X)} & 1 & Checks if entity \texttt{X} is young. & \ding{55} & \ding{55} & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \texttt{IsAtInter(X)} & 1 & Checks if entity \texttt{X} is at the intersection. & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \texttt{IsInInter(X)} & 1 & Checks if entity \texttt{X} is in the intersection. & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \texttt{IsClose(X, Y)} & 2 & Checks if entity \texttt{X} is close to entity \texttt{Y}. & \ding{55} & \ding{55} & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \texttt{HigherPri(X, Y)} & 2 & Checks if entity \texttt{X} has higher priority than entity \texttt{Y}. & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \texttt{CollidingClose(X, Y)} & 2 & Checks if entity \texttt{X} is about to collide with entity \texttt{Y}. & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \texttt{LeftOf(X, Y)} & 2 & Checks if entity \texttt{X} is left of entity \texttt{Y}. & \ding{55} & \ding{55} & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \texttt{RightOf(X, Y)} & 2 & Checks if entity \texttt{X} is right of entity \texttt{Y}. & \ding{55} & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \texttt{NextTo(X, Y)} & 2 & Checks if entity \texttt{X} is next to entity \texttt{Y}. & \ding{55} & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+    \bottomrule[1pt]
+    \end{tabular}
+  \label{tab:predicates}
+\end{threeparttable}
+\vspace{-0.6cm}
+\end{table}
+
+\begin{table}[!t]
+    \centering
+    \setlength{\tabcolsep}{1.25mm}
+    \fontsize{7.5}{8}\selectfont
+    \caption{All the rule clauses and their descriptions in the expert mode of the SPF tasks. The clauses in other modes are the subsets of this full list.}
+    \begin{threeparttable}
+    \begin{tabular}{p{4.5cm} p{8.5cm}}
+    \toprule[1pt]
+    Rule & Description \\
+    \midrule
+    \texttt{Stop(X):- Not(IsAmbulance(X)),} \newline
+    \texttt{Not(IsOld(X)), IsAtInter(X),} \newline
+    \texttt{IsInInter(Y).} & If \texttt{X} is not an ambulance and not old, and \texttt{X} is at an intersection, and \texttt{Y} is in an intersection, then \texttt{X} should stop. \\
+    \midrule
+    \texttt{Stop(X):- Not(IsAmbulance(X)),} \newline
+    \texttt{Not(IsOld(X)), IsAtInter(X),} \newline
+    \texttt{IsAtInter(Y), HigherPri(Y, X).} & If \texttt{X} is not an ambulance and not old, and \texttt{X} is at an intersection, and \texttt{Y} is at an intersection, and \texttt{Y} has higher priority than \texttt{X}, then \texttt{X} should stop. \\
+    \midrule
+    \texttt{Stop(X):- Not(IsAmbulance(X)),} \newline
+    \texttt{Not(IsOld(X)), IsInInter(X),} \newline
+    \texttt{IsInInter(Y), IsAmbulance(Y).} & If \texttt{X} is not an ambulance and not old, and \texttt{X} is in an intersection, and \texttt{Y} is in an intersection, and \texttt{Y} is an ambulance, then \texttt{X} should stop. \\
+    \midrule
+    \texttt{Stop(X):- Not(IsAmbulance(X)),} \newline
+    \texttt{Not(IsPolice(X)), IsCar(X),} \newline
+    \texttt{Not(IsInInter(X)), Not(IsAtInter(X)),} \newline
+    \texttt{LeftOf(Y, X), IsClose(Y, X), IsPolice(Y).} & If \texttt{X} is not an ambulance and not police, and \texttt{X} is a car, and \texttt{X} is not in or at an intersection, and \texttt{Y} is left of and close to \texttt{X}, and \texttt{Y} is police, then \texttt{X} should stop. \\
+    \midrule
+    \texttt{Stop(X):- IsBus(X), Not(IsInInter(X)),} \newline
+    \texttt{Not(IsAtInter(X)), RightOf(Y, X),} \newline
+    \texttt{NextTo(Y, X), IsPedestrian(Y).} & If \texttt{X} is a bus, and \texttt{X} is not in or at an intersection, and \texttt{Y} is right of and next to \texttt{X}, and \texttt{Y} is a pedestrian, then \texttt{X} should stop. \\
+    \midrule
+    \texttt{Stop(X):- IsAmbulance(X),} \newline
+    \texttt{RightOf(Y, X), IsOld(Y).} & If \texttt{X} is an ambulance, and \texttt{Y} is right of \texttt{X}, and \texttt{Y} is old, then \texttt{X} should stop. \\
+    \midrule
+    \texttt{Stop(X):- Not(IsAmbulance(X)),} \newline
+    \texttt{Not(IsOld(X)), CollidingClose(X, Y).} & If \texttt{X} is not an ambulance and not old, and \texttt{X} is close to colliding with \texttt{Y}, then \texttt{X} should stop. \\
+    \midrule
+    \texttt{Slow(X):- Not(Stop(X)), IsTiro(X),} \newline
+    \texttt{IsPedestrian(Y), IsClose(X, Y).} & If \texttt{X} should not stop, and \texttt{X} is a tiro, and \texttt{Y} is a pedestrian, and \texttt{X} is close to \texttt{Y}, then \texttt{X} should slow. \\
+    \midrule
+    \texttt{Slow(X):- Not(Stop(X)), IsTiro(X),} \newline
+    \texttt{IsInInter(X), IsAtInter(Y).} & If \texttt{X} should not stop, and \texttt{X} is a tiro, and \texttt{X} is in an intersection, and \texttt{Y} is at an intersection, then \texttt{X} should slow. \\
+    \midrule
+    \texttt{Slow(X):- Not(Stop(X)), IsPolice(X),} \newline
+    \texttt{IsYoung(Y), IsYoung(Z),} \newline
+    \texttt{NextTo(Y, Z).} & If \texttt{X} should not stop, and \texttt{X} is police, and \texttt{Y} is young, and \texttt{Z} is young, and \texttt{Y} is next to \texttt{Z}, then \texttt{X} should slow. \\
+    \midrule
+    \texttt{Fast(X):- Not(Stop(X)), Not(Slow(X)),} \newline
+    \texttt{IsReckless(X), IsAtInter(Y).} & If \texttt{X} should not stop, and \texttt{X} should not slow, and \texttt{X} is reckless, and \texttt{Y} is at an intersection, then \texttt{X} should go fast. \\
+    \midrule
+    \texttt{Fast(X):- Not(Stop(X)), Not(Slow(X)),} \newline
+    \texttt{IsBus(X).} & If \texttt{X} should not stop, and \texttt{X} should not slow, and \texttt{X} is a bus, then \texttt{X} should go fast. \\
+    \midrule
+    \texttt{Fast(X):- Not(Stop(X)), Not(Slow(X)),} \newline
+    \texttt{IsPolice(X), IsReckless(Y).} & If \texttt{X} should not stop, and \texttt{X} should not slow, and \texttt{X} is police, and \texttt{Y} is reckless, then \texttt{X} should go fast. \\
+    \bottomrule[1pt]
+    \end{tabular}
+    \label{tab:rules}
+    \vspace{-0.3cm}
+    \end{threeparttable}
+\end{table}
+
+
+% Table generated by Excel2LaTeX from sheet 'Sheet5'
+\subsection{Safe Path Following}
+\myparagraph{Modes and Dataset:} Across all modes, we fix the (maximum) number of FOV agents into 5, \textit{i.e.}, $\Tilde{N}_1=5$.
+If the number of observed agents are fewer than $5$, zero-padding (closed-world assumption) is utilized, otherwise, we neglect the extra agents.
+The predicates involved in each mode are displayed in \tref{tab:predicates}.
+Easy mode includes $7$ unary and $2$ binary predicates, resulting in an $\sum^K_i \Tilde{N}^{r_i}_1=85$ dimensional grounding vector. 
+Rules involve only \textit{spatial} concepts and constrain the \texttt{Stop} action.
+Medium mode features $8$ unary predicates and $4$ binary predicates, creating a $\sum^K_i \Tilde{N}^{r_i}_1=140$ dimensional grounding vector. 
+The medium rule sets is extended from the easy mode and incorporate both \textit{spatial} and \textit{semantic} concepts, constraining the \texttt{Stop} action.
+Hard mode contains $11$ unary predicates and $6$ binary predicates, yielding a $\sum^K_i \Tilde{N}^{r_i}_1=205$ dimensional grounding vector. 
+Rules cover all \textit{spatial} and \textit{semantic} concepts and constrain the \texttt{Stop} action.
+The expert mode constrains all four actions with the most complex rule sets.
+We provide standard training/validation/test agent configurations and validation/test episodes for all the modes.
+The training agents cover all the necessary concepts in the rules, while validation and test agents are different and more complex, see our code library for the detailed agent configuration.
+For each mode, we collect $40$ validation episodes and $100$ test episodes using corresponding agent distribution, making sure the episodes cover all the \textit{concepts} and actions.
+When training the BC branch algorithms, we collected $100$ trajectories from the oracle as the demonstration.
+
+\myparagraph{Reward:}
+During test, the rule violation weight $w^\mathrm{r}$ is set to $-10$ for easy, medium, and hard mode across all the $M$ clauses.
+For expert mode, we set this constant punishment to $-5$.
+In terms of step-wise action costs $\phi(\mathbf{a}^t_1)$, the easy, medium, and hard modes are configured as follows:
+$\texttt{Slow}: -2, \texttt{Normal}: 0, \texttt{Fast}: -2, \texttt{Stop}: -5$.
+In the expert mode, the costs are $\texttt{Slow}: -2, \texttt{Normal}: -1, \texttt{Fast}: -2, \texttt{Stop}: -3$.
+Note that the action costs will be normalized by the length of the global path.
+Overtime punishment is set to $-3$ for all the modes.
+During training, we find that different methods requires different reward functions to work effectively.
+Therefore, we first fix the action costs and have tried our best to tune the rule violation and overtime punishment for each method.
+For fairness, NLM-DQN and DQN used the same training reward.
+For more details about the reward, please see our code library.
+
+\subsection{Visual Action Predication}
+\myparagraph{Modes:} As shown in \tref{tab:predicates}, the predicates in the two modes involve the full list.
+As for the clauses, easy mode only constrains \texttt{Stop} and \texttt{Slow} actions, setting \texttt{Normal} as the default action.
+Hard mode constrains all the three actions with \texttt{Normal} set as the default actions.
+Note that the rule clauses in hard model is a superset of that in the easy mode.
+
+\myparagraph{Datasets:}
+In the random agent setting, we randomly generated $100$ and $20$ cities with different agent compositions for training and validation, respectively.
+For each city, we run the simulation for $100$ steps and only used the data after $10$ steps.
+In the fixed agent setting, we first pre-define different training/validation/test agent compositions.
+Then, we randomly initialize the cities for $100$ times.
+For each initialization, we run the simulation for $100$ steps and only used the data after $10$ steps.
+This process results in training sets with $8.9k$ images (with more than $89k$ entity samples).
+The models trained with different setting are tested in the same fixed agent setting test sets.
+See our code library and dataset for detailed agent compositions.
+
+
+\section{Full Procedure of \model{} Simulation}\label{app:fps}
+We provide more details for the simulator here.
+
+\myparagraph{Static Urban Semantics:} There are a total of $B=8$ static semantics of the urban map, namely ``Walking Street'', ``Traffic Street'', ``Crossing'', ``House'', ``Office'', ``Garage'', ``Store'', ``Gas Station''.
+They are (currently) only used during initialization.
+Specifically, different types of agents will sample start and goal locations around different static semantics.
+Pedestrians will move from ``House'', ``Office'', and ``Store'' to ``House'', ``Office'', and ``Store'', while Cars are navigating between ``Garage'', ``Gas Station'', and ``Store'' to ``Garage'', ``Gas Station'', and ``Store''.
+Besides, the agents use different search algorithms based on these semantics to construct their global paths.
+Specifically, the pedestrians leverage A$^*$ search on the ``movable region'' of the map $\mathbf{M}_{\mathrm{s}}$, which is defined as the union of Walking Streets and Crossings.
+In contrast, for cars, since they should move only on the right side of the road in real-world, we first construct the ``one-way'' road map of the Traffic Streets, which is a directed cyclic graph.
+Then, we connect the start and goal points to this road map and add them to the graph nodes.
+Finally, Dijkstra search is employed to construct the shortest path from start node to the goal node, which is the global path for a car.
+
+\myparagraph{Rendering Details:} As introduced above, there exist $8$ static semantics. 
+As shown in \tref{tab:predicates}, LogiCity also involves $9$ semantic \textit{concepts} of the agents.
+Therefore, for each of the $17$ semantics, we ask GPT4~\citep{achiam2023gpt4} to generate $40$ diverse descriptions.
+Then we leverage Stable-Diffusion XL model~\citep{podell2023sdxl} to generate $\sim 2000$ diverse icons from these descriptions.
+Finally, we employed a human expert to select $50\sim 200$ icons for each semantic.
+For mode details, please see our code library.
+
+In addition, we also present the full procedure of the scene simulation by \model{} in Algorithm~\ref{alg:logicity}.
+
+\clearpage
+
+\section{State Space Comparison}\label{app:ssc}
+
+\begin{wraptable}{r}{0.5\columnwidth}
+    \vspace{-0.65cm}
+    \setlength{\tabcolsep}{1.0mm}
+    \fontsize{7.5}{8}\selectfont
+    \caption{Comparison of results from different state space in the LogiCity SPF task. By default, the observation state is the \textit{groundings} of the predicates, which is abstract (Abs.) and lossy. We also tried to provide exact state (Exa.) as observation, which is the semantic point cloud in the ego agent FOV.}
+        \begin{center}
+            \begin{tabular}{cc|ccc|ccc}
+            \toprule[1pt]
+            \multicolumn{2}{c|}{Mode} & \multicolumn{3}{c|}{Easy} & \multicolumn{3}{c}{Hard} \\
+            \midrule
+            Method & Obs   & TSR   & DSR   & Score & TSR & DSR & Score \\
+            \multirow{2}[0]{*}{DQN} & Abs.  & \underline{\textbf{0.35}}  & 0.89  & 4.8   &  \underline{\textbf{0.09}}  & 0.12  & 0.63 \\
+                  & Exa.  & 0.12  & 0.329 & 2.1   & 0.01  & 0.56  & 2.69 \\
+            \multirow{2}[1]{*}{MB-Shooting} & Abs.  & \underline{\textbf{0.24}}  & 0.44  & 2.55  & \underline{\textbf{0.16}}  & 0.17  & 1.26 \\
+                  & Exa.  & 0.23  & 0.264 & 2.12  & 0.02  & 0.24  & 1.32 \\
+            \bottomrule[1pt]
+            \end{tabular}%
+            \vspace{-0.3cm}
+            \label{tab:state_space}
+        \end{center}
+\end{wraptable}
+
+
+In the SPF task, we by default provide the predicate groundings as the observation of the agents, which is \textit{abstract} and could be \textit{lossy}~\citep{chitnis2022nsrt}.
+Thus, we have also tried to provide exact states to the agents in this section.
+Specifically, we annotate each pixel of the FOV map with the agent semantics and convert the pixels into 2D semantic point clouds.
+Since these point clouds contain all the information needed for an optimal policy, it serves as the ``Exact State" for the ego agent.
+The results comparison of using abstract (Abs.) and exact (Exa.) states is shown in \tref{tab:state_space}, where we find using ``Exact State'' could be much harder for the agents to learn the abstractions in \textit{easy} mode.
+In \textit{hard} mode, the agents can easily converge to overly careful policies and fail to complete the task in time.
+One possible future solution for ``Exact State'' is to combine bi-level planning~\citep{chitnis2022nsrt} with reinforcement learning.
+
+
+% Table generated by Excel2LaTeX from sheet 'Sheet6'
+
+\section{Quantitative Perceptual Noise}\label{app:qpn}
+Compared with structured knowledge graphs~\citep{bordes2013wn18,toutanova2015fbk,badreddine2022ltn}, the VAP task of LogiCity introduces diverse RGB images, which require models to conduct abstract reasoning with high-level perceptual noise.
+We quantitatively display the perception accuracy of different \textit{concepts} from the NLM model~\citep{dong2019nlm} in \tref{tab:concept_acc}.
+Even with supervision, the averaged recall rate for the concepts is not satisfiable (Note that the errors will actually accumulate, which will be much more worse than the $55\%$ averaged result).
+Compared with binary predicates, unary predicates need operation on the RGB image, which is thus harder.
+We also observe that the results are highly-imbalanced across concepts.
+For example, pedestrains and cars are easy to recognize, but a police/tiro car is extremely hard to be distinguished from normal ones.
+In terms of binary predicates, \texttt{CollidingClose} is the hardest to learn, since it needs to consider all the locations, sizes, and directions of the two entities, while the others only involves positions or priorities.
+One potential solution to the perceptual noise is borrowing off-the-shelf foundation models~\citep{kirillov2023sam,zhang2022glipv2} for the grounding task.
+
+
+
+\section{Visualizations}\label{app:vis}
+
+\begin{algorithm}[!t]
+    \caption{LogiCity Simulation}
+    \DontPrintSemicolon
+    \KwIn{Concepts $\mathcal{P}$, Rules $\mathcal{C}$, Agents $\mathcal{A}$, Static urban map $\mathbf{M}_{\mathrm{s}}$, Generative models for rendering}
+    \BlankLine
+
+    Generate $\mathbf{M}_{\mathrm{s}}$ with dimensions $(W, H, B)$ and sample collision-free coordinates for agents\;
+    Compute global paths for each agent using search-based planner\;
+    \BlankLine
+
+     \For{each time step $t$}{
+            \BlankLine
+            Update $\mathbf{M}^t$ with current agent locations and paths\;
+            \BlankLine
+            \For{each agent $A_n$}{
+            \BlankLine
+                Obtain $\mathbf{M}^t_n$ and $\mathcal{A}^t_n$ using cropping function {\small\textcolor{lightgray}{\Comment*[r]{Local FOV observation}}}
+                \BlankLine
+                
+                Compute $\mathbf{g}^t_n$ by applying $\mathcal{F}_i$ to $\mathbf{M}^t_n$ and $\mathcal{A}^t_n$ {\small\textcolor{lightgray}{\Comment*[r]{Grounding predicates}}}
+                \BlankLine
+    
+                Compute action predicates $\mathbf{a}_n^t$ using SMT solver with $\mathbf{g}^t_n$ and $\mathcal{C}$ {\small\textcolor{lightgray}{\Comment*[r]{Rule inference}}}
+                \Indm
+                \BlankLine
+    
+                \Indp
+                Move agent based on $\mathbf{a}_n^t$\;
+            }
+            \BlankLine
+            
+            Update $\mathbf{M}^{t+1}$ {\small\textcolor{lightgray}{\Comment*[r]{Update semantic map}}}
+            \BlankLine
+            
+            \If{agent reaches goal}{
+            \BlankLine
+                Set new goal location and compute new path {\small\textcolor{lightgray}{\Comment*[r]{Re-sample goal and re-plan path}}}
+            }
+        }
+    \BlankLine
+
+    Generate concept descriptions using GPT-4 and generate icons using diffusion model\;
+    Compose icons into $\mathbf{M}^t$ to create RGB image $\mathbf{I}^t$ {\small\textcolor{lightgray}{\Comment*[r]{Rendering}}}
+    \BlankLine
+ \KwOut{RGB images of urban grid maps $\mathbf{I}^t$}
+    \label{alg:logicity}
+\end{algorithm}
+
+
+\begin{table}[!t]
+    \centering
+    \setlength{\tabcolsep}{0.8mm}
+    \fontsize{7}{7.5}\selectfont
+    \caption{Quantitative results for concept recognition in the VAP task of LogiCity. We report the recall rate of NLM~\citep{dong2019nlm} model for each predicate (with threshold $0.5$ on the predicted probability). The results are obtained from hard mode with random training agents.}
+  
+    \begin{tabular}{ccccccccccccc}
+        \toprule[1pt]
+        Arity & \multicolumn{11}{c}{Unary} \\
+        \midrule
+        Predicates & \texttt{IsPed.} & \texttt{IsCar} & \texttt{IsAmbu.} & \texttt{IsBus} & \texttt{IsPolice} & \texttt{IsTiro} & \texttt{IsReckl.} & \texttt{IsOld} & \texttt{IsYoung} & \texttt{IsAtInter} & \texttt{IsInInter} & Avg. \\
+        Num. Samples & 10680 & 14240 & 1780  & 1780  & 3560  & 1780  & 3560  & 3560  & 5340  & 7490  & 3627  &  \\
+        Recall@0.5 & 0.774 & 0.981 & 0.251 & 0.4   & 0.073 & 0.024 & 0.158 & 0.328 & 0.563 & 0.278 & 0.332 & 0.553 \\
+        \midrule
+    \end{tabular}%
+    \vspace{-0.15cm}
+    \begin{tabular}{ccccccccccccc}
+        \midrule
+        Arity & \multicolumn{11}{c}{Binary} \\
+        \midrule
+        Predicates & \texttt{IsClose} & & \texttt{HigherPri} & & \texttt{CollidingClose} & & \texttt{LeftOf} & & \texttt{RightOf} & & \texttt{NextTo} & Avg. \\
+        Num. Samples & 23660 & & 28902 & & 500   & & 33046 & & 28064 & & 15495 \\
+        Recall@0.5 & 0.783 & & 1     & & 0.05  & & 0.857 & & 0.921 & & 0.874 & 0.887 \\
+        \bottomrule[1pt]
+    \end{tabular}%
+    \vspace{-0.4cm}
+    \label{tab:concept_acc}%
+\end{table}%
+
+\myparagraph{SPF:} Visualizations of the SPF task episodes are displayed in \fref{fig:vis_spf}.
+Compared with the training city shown on the left, test cities have different agent compositions.
+For example, training city only has 2 old man while test cities has 4 such entities, featuring compositional generalization challenge.
+Compared with pure neural networks, NeSy method (NLM-DQN) can better generalize to unseen compositions.
+For example, in Episode 92, Step 84, the ego agent sees two \texttt{pedestrians} \texttt{InIntersection} with an \texttt{Ambulance} \texttt{AtIntersection}, which is an unseen composition during training.
+DQN fails here, outputting \texttt{Normal} action while NLM-DQN succeeds with the correct \texttt{Stop} decision.
+SPF task also features realistic multi-agent interaction.
+As shown in Episode 93, Step 125, since the two algorithms made different decisions in previous steps, the city will be very different as the other agents are largely affected by the ego actions.
+
+\myparagraph{VAP:} Visualizations of the VAP task examples are shown in \fref{fig:vis_vap}.
+Compared with GNN~\citep{xu2018gnn}, the NeSy method NLM~\citep{dong2019nlm} can better understand the \textit{abstractions} of LogiCity.
+For example, \texttt{Reckless} cars drives \texttt{Normally} when it is \texttt{InIntersection}, while other cars should drive \texttt{Slow}.
+We find that GNN~\citep{xu2018gnn} shows limitation in understanding such \textit{concept} and rules, making wrong predictions.
+
+\newtcolorbox{pikebox}[1]{colback=cyan!5!white,colframe=darkblue,fonttitle=\bfseries,title=#1,width=\linewidth}
+\begin{figure*}[!b]
+    \begin{pikebox}{In-Context Demonstrations and Example Questions from LogiCity}
+    \tiny
+    \begin{minted}[breaklines]{markdown}
+    You are an expert in First-Order-Logic (FOL) Rule induction, the following question-answers are FOL reasoning examples. Here are 5 demonstrations:
+    
+    Question: "In the scene you see a total of 12 entities, they are named as follows: Entity_0, Entity_1, Entity_2, Entity_3, Entity_4, Entity_5, Entity_6, Entity_7, Entity_8, Entity_9, Entity_10, Entity_11. There exist the following predicates as their attributes and relations: IsPedestrian (arity: 1), IsCar (arity: 1), IsAmbulance (arity: 1), IsBus (arity: 1), IsPolice (arity: 1), IsTiro (arity: 1), IsReckless (arity: 1), IsOld (arity: 1), IsYoung (arity: 1), IsAtInter (arity: 1), IsInInter (arity: 1), IsClose (arity: 2), HigherPri (arity: 2), CollidingClose (arity: 2), LeftOf (arity: 2), RightOf (arity: 2), NextTo (arity: 2), Sees (arity: 2). The truth value of these predicates grounded to the entities are as follows (Only the ones that are True are provided, assume the rest are False): IsPedestrian(Entity_1), IsPedestrian(Entity_2), IsPedestrian(Entity_3), IsPedestrian(Entity_4), IsPedestrian(Entity_5), IsCar(Entity_0), IsCar(Entity_6), IsCar(Entity_7), IsCar(Entity_8), IsCar(Entity_9), IsCar(Entity_10), IsCar(Entity_11), IsAmbulance(Entity_0), IsAmbulance(Entity_11), IsPolice(Entity_6), IsPolice(Entity_10), IsTiro(Entity_9), IsReckless(Entity_8), IsOld(Entity_3), IsOld(Entity_5), IsYoung(Entity_1), IsYoung(Entity_2), IsAtInter(Entity_5), IsAtInter(Entity_8), IsAtInter(Entity_11), IsInInter(Entity_0), IsInInter(Entity_6), IsInInter(Entity_10), IsClose(Entity_1, Entity_3), IsClose(Entity_3, Entity_1), IsClose(Entity_3, Entity_7), IsClose(Entity_4, Entity_10), IsClose(Entity_7, Entity_3), IsClose(Entity_7, Entity_10), IsClose(Entity_10, Entity_4), IsClose(Entity_10, Entity_7), IsClose(Entity_10, Entity_11), IsClose(Entity_11, Entity_10), ..., Sees(Entity_1, Entity_3), Sees(Entity_1, Entity_7), Sees(Entity_1, Entity_10), Sees(Entity_3, Entity_1), Sees(Entity_3, Entity_7), Sees(Entity_3, Entity_10), Sees(Entity_4, Entity_10), Sees(Entity_4, Entity_11), Sees(Entity_5, Entity_8), Sees(Entity_7, Entity_10), Sees(Entity_7, Entity_11), Sees(Entity_8, Entity_5), Sees(Entity_10, Entity_1), Sees(Entity_10, Entity_3), Sees(Entity_10, Entity_7), Sees(Entity_11, Entity_4), Sees(Entity_11, Entity_7), Sees(Entity_11, Entity_10). What is the next action of entity Entity_9?"
+    Option: (A) Slow (B) Normal (C) Fast (D) Stop
+    Answer: B
+    
+    ... (4 more demos not displayed)
+    
+    Now try your best to first identify the FOL rules from the examples above and then answer the following question. Your answer should strictly end with the format of single letter: 'Answer: _.'
+    
+    Question: "In the scene you see a total of 14 entities, they are named as follows: Entity_0, Entity_1, Entity_2, Entity_3, Entity_4, Entity_5, Entity_6, Entity_7, Entity_8, Entity_9, Entity_10, Entity_11, Entity_12, Entity_13. There exist the following predicates as their attributes and relations: IsPedestrian (arity: 1), IsCar (arity: 1), IsAmbulance (arity: 1), IsBus (arity: 1), IsPolice (arity: 1), IsTiro (arity: 1), IsReckless (arity: 1), IsOld (arity: 1), IsYoung (arity: 1), IsAtInter (arity: 1), IsInInter (arity: 1), IsClose (arity: 2), HigherPri (arity: 2), CollidingClose (arity: 2), LeftOf (arity: 2), RightOf (arity: 2), NextTo (arity: 2), Sees (arity: 2). The truth value of these predicates grounded to the entities are as follows (Only the ones that are True are provided, assume the rest are False): IsPedestrian(Entity_1), IsPedestrian(Entity_2), IsPedestrian(Entity_3), IsPedestrian(Entity_4), IsPedestrian(Entity_5), IsPedestrian(Entity_6), IsCar(Entity_0), IsCar(Entity_7), IsCar(Entity_8), IsCar(Entity_9), IsCar(Entity_10), IsCar(Entity_11), IsCar(Entity_12), IsCar(Entity_13), IsAmbulance(Entity_12), IsBus(Entity_10), IsPolice(Entity_9), IsPolice(Entity_11), IsTiro(Entity_8), IsReckless(Entity_0), IsReckless(Entity_7), IsOld(Entity_3), IsOld(Entity_5), IsYoung(Entity_1), IsYoung(Entity_2), IsYoung(Entity_4), IsAtInter(Entity_8), IsAtInter(Entity_13), IsInInter(Entity_6), IsInInter(Entity_11), IsClose(Entity_0, Entity_5), IsClose(Entity_1, Entity_3), IsClose(Entity_2, Entity_8), IsClose(Entity_3, Entity_1), IsClose(Entity_5, Entity_0), IsClose(Entity_5, Entity_6), IsClose(Entity_5, Entity_10), IsClose(Entity_6, Entity_5), IsClose(Entity_6, Entity_8), IsClose(Entity_6, Entity_13), IsClose(Entity_8, Entity_2), IsClose(Entity_8, Entity_6), IsClose(Entity_8, Entity_10), IsClose(Entity_10, Entity_5), IsClose(Entity_10, Entity_8), IsClose(Entity_10, Entity_13), IsClose(Entity_13, Entity_6), IsClose(Entity_13, Entity_10), HigherPri(Entity_0, Entity_8), HigherPri(Entity_0, Entity_10), HigherPri(Entity_0, Entity_12), HigherPri(Entity_0, Entity_13), HigherPri(Entity_2, Entity_0), HigherPri(Entity_2, Entity_8), HigherPri(Entity_2, Entity_10), HigherPri(Entity_2, Entity_13), HigherPri(Entity_5, Entity_0), HigherPri(Entity_5, Entity_8), HigherPri(Entity_5, Entity_10), HigherPri(Entity_5, Entity_12), HigherPri(Entity_5, Entity_13), HigherPri(Entity_6, Entity_0), HigherPri(Entity_6, Entity_8), HigherPri(Entity_6, Entity_10), HigherPri(Entity_6, Entity_12), HigherPri(Entity_6, Entity_13), HigherPri(Entity_7, Entity_9), HigherPri(Entity_8, Entity_10), HigherPri(Entity_8, Entity_12), HigherPri(Entity_8, Entity_13), HigherPri(Entity_10, Entity_12), HigherPri(Entity_10, Entity_13), HigherPri(Entity_12, Entity_13), CollidingClose(Entity_0, Entity_10), CollidingClose(Entity_7, Entity_9), CollidingClose(Entity_12, Entity_13), LeftOf(Entity_0, Entity_2), LeftOf(Entity_0, Entity_6), LeftOf(Entity_0, Entity_8), LeftOf(Entity_2, Entity_5), LeftOf(Entity_2, Entity_13), LeftOf(Entity_3, Entity_1), LeftOf(Entity_5, Entity_8), LeftOf(Entity_6, Entity_2), LeftOf(Entity_6, Entity_8), LeftOf(Entity_8, Entity_5), LeftOf(Entity_8, Entity_12), LeftOf(Entity_8, Entity_13), LeftOf(Entity_10, Entity_2), LeftOf(Entity_10, Entity_6), LeftOf(Entity_10, Entity_8), LeftOf(Entity_12, Entity_0), ..., Sees(Entity_0, Entity_5), Sees(Entity_0, Entity_6), Sees(Entity_0, Entity_8), Sees(Entity_0, Entity_10), Sees(Entity_0, Entity_12), Sees(Entity_0, Entity_13), Sees(Entity_1, Entity_3), Sees(Entity_3, Entity_1), Sees(Entity_5, Entity_4), Sees(Entity_6, Entity_0), Sees(Entity_6, Entity_10), Sees(Entity_6, Entity_12), Sees(Entity_6, Entity_13), Sees(Entity_7, Entity_9), Sees(Entity_8, Entity_0), Sees(Entity_8, Entity_2), Sees(Entity_8, Entity_6), Sees(Entity_8, Entity_10), Sees(Entity_8, Entity_13), Sees(Entity_10, Entity_5), Sees(Entity_10, Entity_6), Sees(Entity_10, Entity_8), Sees(Entity_10, Entity_12), Sees(Entity_10, Entity_13), Sees(Entity_12, Entity_0), Sees(Entity_12, Entity_6), Sees(Entity_12, Entity_10), Sees(Entity_12, Entity_13), Sees(Entity_13, Entity_0), Sees(Entity_13, Entity_2), Sees(Entity_13, Entity_5), Sees(Entity_13, Entity_6), Sees(Entity_13, Entity_8), Sees(Entity_13, Entity_10). What is the next action of entity Entity_11?"
+    Option: (A) Slow (B) Normal (C) Fast (D) Stop
+    \end{minted}
+    \end{pikebox}
+    \vspace{-3mm}
+    \caption{In-context demos and questions for LLM testing. Note that the demos cover all the options and the test questions have different entity compositions. We only display one demo and part of the groundings due to the space limit.}
+    \label{fig:incontex}
+    \vspace{-4mm}
+\end{figure*}
+
+\begin{figure*}[!t]
+	\centering
+	\includegraphics[width=1.0\columnwidth]{imgs/spf_vis.pdf}
+ \vspace{-0.6cm}
+	\caption{Qualitative comparison between NLM-DQN~\citep{dong2019nlm,mnih2013dqn} and DQN~\citep{mnih2013dqn} agents in the hard mode of SPF task. We display the training episode on the left, which has different agent sets from the test, featuring compositional generalization challenge.
+    Compared with the pure neural network, NeSy method~\citep{dong2019nlm,mnih2013dqn} is better at abstract reasoning. 
+    In Episode 92, with unseen compositions of concepts, the DQN agent fails while NLM-DQN succeeds with the correct \texttt{Stop} decision.
+    Note that in SPF, different ego decisions could significantly affect the city evolution (See Episode 93, Step 125).
+	}
+	\label{fig:vis_spf}
+\end{figure*}
+
+\begin{figure*}[!t]
+	\centering
+	\includegraphics[width=1.0\columnwidth]{imgs/vap_vis.pdf}
+ \vspace{-0.6cm}
+	\caption{Qualitative comparison between NLM~\citep{dong2019nlm} and GNN~\citep{xu2018gnn} in the hard mode of VAP task. We display the \textit{grounded} clauses, where the involved entities are marked with boxes in corresponding colors. Correct predictions are shown in gree, while the wrong one is in red.
+	}
+	\label{fig:vis_vap}
+\end{figure*}
+
+
+\end{document}

@@ -8,7 +8,6 @@ simulation:
   rl: true
   debug: false
   use_multi: false
-  enable_gna: true
   agent_region: 120
   rl_agent: 
     max_priority: 11

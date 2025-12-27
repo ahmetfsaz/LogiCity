@@ -93,6 +93,20 @@ CLOSE_RANGE_MAX = 20
 # solver processer
 NUM_PROCESS = 4
 AGENT_FOV = 25 # better be larger than intersection width
+
+# Entity type criticality scores based on occurrence count in expert sub-rules
+# Used for informativeness calculations
+ENTITY_OCCURRENCE_SCORES = {
+    "Ambulance": 7,  # 7 occurrences in sub-rules
+    "Old": 6,        # 6 occurrences
+    "Police": 4,     # 4 occurrences
+    "Bus": 2,        # 2 occurrences
+    "Pedestrian": 2, # 2 occurrences
+    "Reckless": 2,   # 2 occurrences
+    "Tiro": 2,       # 2 occurrences
+    "Young": 2,      # 2 occurrences
+    "Car": 1         # 1 occurrence
+}
 ACTION2NAME = {
     0: "Left",
     1: "Right",

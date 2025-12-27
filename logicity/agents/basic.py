@@ -1,6 +1,9 @@
 import torch
+import logging
 from torch.distributions import Categorical
 from ..core.config import *
+
+logger = logging.getLogger(__name__)
 
 class Agent:
     def __init__(self, size, id, world_state_matrix, concepts, init_info=None, debug=False, region=240):
@@ -30,6 +33,8 @@ class Agent:
         self.reach_goal_buffer = 0
         self.debug = debug
         self.region = region
+        # Global Navigation Assistant context
+        self.global_context = None
         self.init(world_state_matrix, init_info, debug)
 
     def init(self, world_state_matrix, init_info=None, debug=False):
@@ -51,24 +56,219 @@ class Agent:
     def get_movable_area(self, world_state_matrix):
         pass
 
+    def receive_global_context(self, broadcast):
+        """
+        Receive global context broadcast from GNA and prepare global entities for Z3 integration.
+
+        Args:
+            broadcast: Global context broadcast from GNA
+        """
+        self.global_context = broadcast
+        self.global_entities = {}  # Global entities prepared for Z3 integration
+
+        if broadcast is not None:
+            global_context = broadcast.get('global_context', {})
+            agent_count = len(global_context)
+            broadcast_id = broadcast.get('broadcast_id', 'unknown')
+            logger.debug(f"Agent {self.type}_{self.id}: Received GNA broadcast {broadcast_id} with {agent_count} global entities")
+
+            # Prepare global entities for Z3 integration
+            for agent_id, agent_data in global_context.items():
+                if agent_id != f"{self.type}_{self.id}":  # Don't include self
+                    self.global_entities[agent_id] = self._prepare_global_entity_for_z3(agent_data)
+
+            # Log what this agent sees in the global context
+            if f"{self.type}_{self.id}" in global_context:
+                my_data = global_context[f"{self.type}_{self.id}"]
+                my_pos = my_data['agent_properties']['position']
+                my_goal = my_data['agent_properties']['goal']
+                logger.debug(f"Agent {self.type}_{self.id}: My global data - pos={my_pos}, goal={my_goal}")
+
+            logger.debug(f"Agent {self.type}_{self.id}: Prepared {len(self.global_entities)} global entities for Z3 reasoning")
+        else:
+            logger.debug(f"Agent {self.type}_{self.id}: Received null GNA broadcast (GNA disabled)")
+            self.global_entities = {}
+
+    def _prepare_global_entity_for_z3(self, agent_data):
+        """
+        Prepare a global entity for integration into Z3 local reasoning.
+
+        Args:
+            agent_data: Agent data from GNA broadcast
+
+        Returns:
+            Dict with Z3-compatible entity information
+        """
+        agent_properties = agent_data['agent_properties']
+
+        # Create a pseudo-agent object similar to what Z3 planner expects
+        class GlobalPseudoAgent:
+            def __init__(self, agent_type, layer_id, concepts, position, direction, goal, 
+                        is_at_intersection=False, is_in_intersection=False):
+                self.type = agent_type
+                self.layer_id = layer_id
+                self.concepts = concepts if concepts else {}
+                self.pos = position
+                self.last_move_dir = direction
+                self.goal = goal
+                self.priority = concepts.get('priority', 1) if concepts else 1
+                self.global_pos = position  # Store absolute position
+                self.in_fov_matrix = False  # Mark as not in FOV matrix
+                self.is_at_intersection = is_at_intersection
+                self.is_in_intersection = is_in_intersection
+
+        return GlobalPseudoAgent(
+            agent_type=agent_properties['type'],
+            layer_id=int(agent_properties.get('layer_id', 0)),
+            concepts=agent_properties.get('concepts', {}),
+            position=agent_properties['position'],
+            direction=agent_properties.get('current_action'),
+            goal=agent_properties['goal'],
+            is_at_intersection=agent_properties.get('is_at_intersection', False),
+            is_in_intersection=agent_properties.get('is_in_intersection', False)
+        )
+
+    def enhance_reasoning_with_global_context(self, local_action_dist):
+        """
+        Enhance local reasoning with global context from GNA.
+
+        Args:
+            local_action_dist: Local action distribution from Z3 reasoning
+
+        Returns:
+            Enhanced action distribution considering global context
+        """
+        if self.global_context is None:
+            # No global context available, use local reasoning only
+            logger.debug(f"Agent {self.type}_{self.id}: Using local reasoning only (no GNA context)")
+            return local_action_dist
+
+        # Extract relevant global information for this agent
+        global_info = self.analyze_global_context_for_agent()
+
+        # Use global context to modify local action distribution
+        enhanced_dist = self.apply_global_context_to_reasoning(local_action_dist, global_info)
+
+        logger.debug(f"Agent {self.type}_{self.id}: Enhanced reasoning with {len(global_info)} global agents")
+        if global_info:
+            # Log some insights about global context usage
+            close_agents = sum(1 for info in global_info.values() if 'close_proximity' in info.get('potential_conflicts', []))
+            competing_goals = sum(1 for info in global_info.values() if 'competing_goals' in info.get('potential_conflicts', []))
+            logger.debug(f"Agent {self.type}_{self.id}: Global insights - close_agents={close_agents}, competing_goals={competing_goals}")
+        return enhanced_dist
+
+    def analyze_global_context_for_agent(self):
+        """
+        Analyze the global context to extract relevant information for this agent.
+
+        Returns:
+            Dict with relevant global information
+        """
+        if self.global_context is None:
+            return {}
+
+        global_context = self.global_context.get('global_context', {})
+        agent_info = {}
+
+        # Analyze other agents' situations
+        for agent_id, context in global_context.items():
+            if agent_id == f"{self.type}_{self.id}":
+                continue  # Skip self
+
+            # Extract relevant information about other agents
+            other_agent_info = {
+                'position': context['agent_properties']['position'],
+                'goal': context['agent_properties']['goal'],
+                'type': context['agent_properties']['type'],
+                'traffic_density': context['environmental_context']['traffic_conditions']['density'],
+                'potential_conflicts': self.identify_potential_conflicts(context)
+            }
+            agent_info[agent_id] = other_agent_info
+
+        return agent_info
+
+    def identify_potential_conflicts(self, other_agent_context):
+        """
+        Identify potential conflicts with another agent based on global context.
+
+        Args:
+            other_agent_context: Context information about another agent
+
+        Returns:
+            List of potential conflicts
+        """
+        conflicts = []
+
+        # Check if other agent is heading toward same goal
+        other_goal = other_agent_context['agent_properties']['goal']
+        if torch.allclose(torch.tensor(self.goal), torch.tensor(other_goal)):
+            conflicts.append('competing_goals')
+
+        # Check if paths might intersect
+        # This is a simplified check - in practice would need more sophisticated path analysis
+        other_pos = other_agent_context['agent_properties']['position']
+        distance = torch.dist(torch.tensor(self.pos, dtype=torch.float),
+                            torch.tensor(other_pos, dtype=torch.float))
+        if distance < 10:  # Within 10 units
+            conflicts.append('close_proximity')
+
+        return conflicts
+
+    def apply_global_context_to_reasoning(self, local_action_dist, global_info):
+        """
+        Apply global context insights to modify local action distribution.
+
+        Args:
+            local_action_dist: Original local action distribution
+            global_info: Processed global context information
+
+        Returns:
+            Modified action distribution considering global context
+        """
+        enhanced_dist = local_action_dist.clone()
+
+        # Example enhancement: If many agents are in close proximity,
+        # increase preference for caution (stop/slow actions)
+        close_agents = sum(1 for info in global_info.values()
+                          if 'close_proximity' in info.get('potential_conflicts', []))
+
+        if close_agents > 2:  # Many agents nearby
+            # Boost cautious actions (assuming higher indices are more cautious)
+            # This is a simplified example - actual logic would depend on action mapping
+            pass
+
+        # If competing for same goal, adjust priorities
+        competing_agents = sum(1 for info in global_info.values()
+                              if 'competing_goals' in info.get('potential_conflicts', []))
+
+        if competing_agents > 0:
+            # Adjust behavior based on priority system
+            # Higher priority agents might be more assertive
+            pass
+
+        return enhanced_dist
+
     def get_action(self, local_action_dist):
+        # Global context is now integrated directly into Z3 reasoning via break_world_matrix
+        # No separate enhancement step needed - single integrated reasoning step
+
         if len(local_action_dist.nonzero()) == 1:
-            # local planner is very strict, only one action is possible
+            # Z3 reasoning is very strict, only one action is possible
             final_action_dist = local_action_dist
         else:
             global_action = self.get_global_action()
             if len(global_action.nonzero()) == 1:
-            # local planner gives multiple actions, but global planner is very strict
+                # Z3 gives multiple actions, but global planner is very strict
                 final_action_dist = global_action
             else:
-                # local planner gives multiple actions, use global planner to filter
+                # Z3 gives multiple actions, use global planner to filter
                 final_action_dist = torch.logical_and(local_action_dist, global_action).float()
                 if len(final_action_dist.nonzero()) == 0:
-                    # local planner and global planner has conflict, but local planner is not strict, take global
+                    # Z3 and global planner have conflict, take global
                     final_action_dist = global_action
         # now only one action is possible
         assert len(final_action_dist.nonzero()) >= 1
-        # sample from the local planner
+        # sample from the enhanced planner
         normalized_action_dist = final_action_dist / final_action_dist.sum()
         dist = Categorical(normalized_action_dist)
         # Sample an action index from the distribution

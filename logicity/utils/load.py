@@ -13,17 +13,30 @@ logger = logging.getLogger(__name__)
 
 class CityLoader:
     @staticmethod
-    def from_yaml(map_yaml_file, 
-                  agent_yaml_file, 
+    def from_yaml(map_yaml_file,
+                  agent_yaml_file,
                   ontology_yaml_file,
-                  rule_yaml_file, 
-                  rule_type, 
-                  rl=False, 
-                  debug=False, 
-                  rl_agent=None, 
-                  use_multi=False, 
+                  rule_yaml_file,
+                  rule_type,
+                  rl=False,
+                  debug=False,
+                  rl_agent=None,
+                  use_multi=False,
                   episode_cache=None,
-                  agent_region=240):
+                  agent_region=240,
+                  **kwargs):
+
+        # Extract config from kwargs (for enable_gna and other settings)
+        # If config is passed directly, use it; otherwise reconstruct from individual kwargs
+        if 'config' in kwargs:
+            config = kwargs['config']
+        else:
+            # Reconstruct config from individual parameters that might be GNA-related
+            config = {k: v for k, v in kwargs.items() if k not in [
+                'map_yaml_file', 'agent_yaml_file', 'ontology_yaml_file',
+                'rule_yaml_file', 'rule_type', 'rl', 'debug', 'rl_agent',
+                'use_multi', 'episode_cache', 'agent_region'
+            ]}
 
         cached_observation = {
                 "Time_Obs": {},
@@ -58,13 +71,13 @@ class CityLoader:
             use_exact = rl_agent["exact_state"] if "exact_state" in rl_agent else False
             if use_exact:
                 city = CityEnvES(grid_size=(WORLD_SIZE, WORLD_SIZE), local_planner=rule_type, \
-                            logic_engine_file=logic_engine_file, rl_agent=rl_agent, use_multi=use_multi)
+                            logic_engine_file=logic_engine_file, rl_agent=rl_agent, use_multi=use_multi, config=config)
             else:
                 city = CityEnv(grid_size=(WORLD_SIZE, WORLD_SIZE), local_planner=rule_type, \
-                            logic_engine_file=logic_engine_file, rl_agent=rl_agent, use_multi=use_multi)
+                            logic_engine_file=logic_engine_file, rl_agent=rl_agent, use_multi=use_multi, config=config)
         else:
             city = City(grid_size=(WORLD_SIZE, WORLD_SIZE), local_planner=rule_type, \
-                        logic_engine_file=logic_engine_file, use_multi=use_multi)
+                        logic_engine_file=logic_engine_file, use_multi=use_multi, config=config)
         cached_observation["Static Info"]["Logic"]["Predicates"] = list(city.local_planner.predicates.keys())
         cached_observation["Static Info"]["Logic"]["Rules"] = city.local_planner.data["Rules"]
         logger.info("Local planner constructed!")

@@ -168,39 +168,107 @@ class Z3PlannerRL(Z3Planner):
             non_zero_layer_indices = torch.where(non_zero_layers)[0]
             partial_world_squeezed = partial_world_all[non_zero_layers]
             partial_agent = {}
+            local_entities_list = []  # Track local FOV entities for potential limiting
+            
+            # Collect local FOV entities
             for layer_id in range(partial_world_squeezed.shape[0]):
                 layer = partial_world_squeezed[layer_id]
                 layer_nonzero_int = torch.logical_and(layer != 0, layer == layer.to(torch.int64))
                 if layer_nonzero_int.nonzero().shape[0] > 1:
                     continue
-                if len(partial_agent) >= self.fov_entities["Entity"] and rl_flag[ego_name]:
-                    # can only handle fixed number of agents
-                    break
                 non_zero_values = int(layer[layer_nonzero_int.nonzero()[0][0], layer_nonzero_int.nonzero()[0][1]])
                 agent_type = LABEL_MAP[non_zero_values]
                 # find this agent
                 other_agent_layer_id = int(non_zero_layer_indices[layer_id])
                 other_agent = agents[layerid2listid[other_agent_layer_id]]
                 assert other_agent.type == agent_type
-                if other_agent_layer_id == agent.layer_id:
-                    partial_agent["ego_{}".format(layer_id)] = PesudoAgent(agent_type, layer_id, other_agent.concepts, other_agent.last_move_dir)
-                else:
-                    partial_agent[str(layer_id)] = PesudoAgent(agent_type, layer_id, other_agent.concepts, other_agent.last_move_dir)
+                
+                pseudo_agent = PesudoAgent(agent_type, layer_id, other_agent.concepts, other_agent.last_move_dir)
+                is_ego = (other_agent_layer_id == agent.layer_id)
+                local_entities_list.append((layer_id, pseudo_agent, is_ego, other_agent_layer_id))
+            
+            # For RL agents, apply local entity limit and add global entities
             if rl_flag[ego_name]:
-                # RL agent needs fixed number of entities
+                max_local = self.fov_entities.get("max_local_entities", self.fov_entities["Entity"])
+                max_global = self.fov_entities.get("max_global_entities", 0)
+                total_entities = self.fov_entities["Entity"]
+                
+                # Add ego agent first (always included)
+                ego_added = False
+                for layer_id, pseudo_agent, is_ego, other_agent_layer_id in local_entities_list:
+                    if is_ego:
+                        partial_agent["ego_{}".format(layer_id)] = pseudo_agent
+                        ego_added = True
+                        break
+                
+                # Add other local entities up to max_local limit (excluding ego)
+                local_count = 1 if ego_added else 0
+                for layer_id, pseudo_agent, is_ego, other_agent_layer_id in local_entities_list:
+                    if not is_ego and local_count < max_local:
+                        partial_agent[str(layer_id)] = pseudo_agent
+                        local_count += 1
+                
+                logger.debug(f"Agent {ego_name}: Added {local_count} local entities (max: {max_local})")
+                
+                # Add global entities from GNA broadcast (up to max_global)
+                global_count = 0
+                if hasattr(agent, 'global_entities') and agent.global_entities and max_global > 0:
+                    # Sort global entities by priority (lower priority value = higher priority)
+                    sorted_global = sorted(
+                        agent.global_entities.items(),
+                        key=lambda x: x[1].concepts.get('priority', 999)
+                    )
+                    
+                    for global_agent_id, global_entity in sorted_global:
+                        if global_count >= max_global:
+                            break
+                        
+                        # Skip if this entity is the ego or already in local FOV
+                        if global_agent_id == f"{agent.type}_{agent.id}":
+                            continue
+                        if any(other_agent_layer_id == global_entity.layer_id 
+                               for _, _, _, other_agent_layer_id in local_entities_list):
+                            continue
+                        
+                        # Global entity carries its own position and intersection info
+                        # No need to access world_matrix - all info is in global_entity
+                        # The global_entity already has: pos, is_at_intersection, is_in_intersection
+                        
+                        # Add global entity to partial_agent with layer_id as key
+                        partial_agent[str(global_entity.layer_id)] = global_entity
+                        global_count += 1
+                    
+                    logger.debug(f"Agent {ego_name}: Added {global_count} global entities from GNA broadcast (max: {max_global})")
+                
+                # Pad with placeholders to reach total_entities
+                current_count = len(partial_agent)
                 ph_concepts = {
                     "type": "PH",
                     "priority": 0,
                 }
-                while len(partial_agent) < self.fov_entities["Entity"]:
-                    layer_id += 1
-                    place_holder_agent = PesudoAgent("PH", layer_id, ph_concepts, \
-                                                      None)
+                layer_id = len(local_entities_list)
+                while current_count < total_entities:
+                    place_holder_agent = PesudoAgent("PH", layer_id, ph_concepts, None)
                     partial_agent["PH_{}".format(layer_id)] = place_holder_agent
-                        # Additional place holder for rl agent
-                    # partial_world_squeezed = torch.cat([partial_world_squeezed, partial_world_squeezed[-1].unsqueeze(0)], dim=0)
-            partial_world[ego_name] = partial_world_squeezed
-            partial_intersection[ego_name] = partial_intersections
+                    layer_id += 1
+                    current_count += 1
+                
+                logger.debug(f"Agent {ego_name}: Total entities = {len(partial_agent)} (local: {local_count}, global: {global_count}, placeholders: {total_entities - local_count - global_count})")
+            else:
+                # Non-RL agents: use all local entities without limits
+                for layer_id, pseudo_agent, is_ego, other_agent_layer_id in local_entities_list:
+                    if is_ego:
+                        partial_agent["ego_{}".format(layer_id)] = pseudo_agent
+                    else:
+                        partial_agent[str(layer_id)] = pseudo_agent
+            # For RL agents, use full world matrix (not squeezed) to accommodate global entities
+            # Global entities will have their positions accessed via global_pos, not world_matrix
+            if rl_flag[ego_name]:
+                partial_world[ego_name] = partial_world_all
+                partial_intersection[ego_name] = partial_intersections
+            else:
+                partial_world[ego_name] = partial_world_squeezed
+                partial_intersection[ego_name] = partial_intersections
             partial_agents[ego_name] = partial_agent
         return ego_agent, partial_agents, partial_world, partial_intersection, rl_flag
             

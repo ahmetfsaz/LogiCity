@@ -1,3 +1,26 @@
+"""
+Predicate Converter for Z3 Reasoning
+
+[MODIFIED] Key changes for GNA integration and coordinate system consistency:
+
+1. ATTRIBUTE PREDICATES (IsAmb, IsBus, IsPolice, etc.):
+   - Now check for "global_{layer_id}" keys in addition to regular and ego keys
+   - This allows GNA broadcast entities to be evaluated by attribute predicates
+
+2. NEW HELPER FUNCTION (_get_entity_position):
+   - Unified position retrieval for ALL entities (local FOV and GNA global)
+   - Returns world_pos from PesudoAgent.world_pos (absolute world coordinates)
+   - Ensures consistent coordinate system for all spatial predicates
+
+3. SPATIAL PREDICATES (IsClose, CollidingClose, LeftOf, RightOf, NextTo):
+   - Now use _get_entity_position() for position retrieval
+   - All distance calculations use absolute world coordinates
+   - Consistent comparisons between local and global entities
+
+4. INTERSECTION PREDICATES (IsAtInter, IsInInter):
+   - For GNA entities: Use pre-computed is_at_intersection/is_in_intersection
+   - For local entities: Continue using intersection_matrix lookup
+"""
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -188,24 +211,54 @@ def IsYoung(world_matrix, intersect_matrix, agents, entity):
     
 def _get_entity_position(world_matrix, agents, entity_name, agent_type, layer_id):
     """
-    Helper function to get entity position from either world_matrix or global_pos.
-    Returns position tensor or None if entity not found.
+    [MODIFIED] Helper function to get entity position in WORLD coordinates.
+    
+    Now ALWAYS returns world coordinates from the stored world_pos attribute,
+    ensuring consistent coordinate system for ALL entities (local FOV and GNA global).
+    
+    The world_pos is computed when PesudoAgent is created:
+    - Local entities: world_pos = local_pos + (x_start, y_start)  
+    - Global entities: world_pos = original GNA position
+    
+    Args:
+        world_matrix: Local FOV world matrix (NOT used for position anymore)
+        agents: Dict of PesudoAgent objects
+        entity_name: Full entity name (e.g., "Car_Agent_5")
+        agent_type: Entity type ("Car" or "Pedestrian")
+        layer_id: Layer index
+    
+    Returns:
+        torch.Tensor: [x, y] position in WORLD coordinates, or None if not found.
     """
     import torch
     
-    # Check if entity is in agents dict
-    agent_obj = agents.get(str(layer_id), agents.get(f"ego_{layer_id}", agents.get(f"global_{layer_id}")))
+    # Find the agent in the agents dict (could be under different key formats)
+    agent_obj = agents.get(str(layer_id), 
+                           agents.get(f"ego_{layer_id}", 
+                           agents.get(f"global_{layer_id}")))
     if agent_obj is None:
         return None
     
-    # Check if global entity (not in FOV matrix)
-    if hasattr(agent_obj, 'in_fov_matrix') and not agent_obj.in_fov_matrix:
-        # Use global position
-        if hasattr(agent_obj, 'global_pos') and agent_obj.global_pos is not None:
-            return torch.tensor(agent_obj.global_pos) if not isinstance(agent_obj.global_pos, torch.Tensor) else agent_obj.global_pos
-        return None
+    # [MODIFIED] Now ALWAYS use stored world_pos for consistent coordinates
+    # This works for both local FOV entities and GNA global entities
+    if hasattr(agent_obj, 'world_pos') and agent_obj.world_pos is not None:
+        world_pos = agent_obj.world_pos
+        if isinstance(world_pos, torch.Tensor):
+            return world_pos
+        else:
+            return torch.tensor(world_pos)
     
-    # Regular FOV entity - get from world_matrix
+    # Fallback for legacy code: check global_pos (deprecated, for backwards compatibility)
+    if hasattr(agent_obj, 'global_pos') and agent_obj.global_pos is not None:
+        global_pos = agent_obj.global_pos
+        if isinstance(global_pos, torch.Tensor):
+            return global_pos
+        else:
+            return torch.tensor(global_pos)
+    
+    # Last resort fallback: try matrix lookup (should not happen with new code)
+    # This is only reached if PesudoAgent was created without world_pos
+    logger.warning(f"Entity {entity_name} has no world_pos - falling back to matrix lookup (may cause coordinate issues)")
     if layer_id >= world_matrix.shape[0]:
         return None
     
@@ -216,7 +269,16 @@ def _get_entity_position(world_matrix, agents, entity_name, agent_type, layer_id
     
     return agent_positions[0]
 
+# =============================================================================
+# [MODIFIED] INTERSECTION PREDICATES - Handle both local and GNA global entities
+# =============================================================================
 def IsAtInter(world_matrix, intersect_matrix, agents, entity1):
+    """
+    [MODIFIED] Check if entity is at an intersection (about to enter).
+    
+    For GNA global entities: Uses pre-computed is_at_intersection from GNA.
+    For local FOV entities: Uses intersection_matrix lookup (local coordinates).
+    """
     if "PH" in entity1:
         return 0
 
@@ -230,7 +292,7 @@ def IsAtInter(world_matrix, intersect_matrix, agents, entity1):
     
     agent_obj = agents.get(str(layer_id), agents.get(f"ego_{layer_id}"))
     
-    # Check if this is a global entity (not in FOV matrix)
+    # [ADDED] GNA global entity handling - use pre-computed intersection state
     if hasattr(agent_obj, 'in_fov_matrix') and not agent_obj.in_fov_matrix:
         # Use pre-computed intersection info from GNA
         return 1 if agent_obj.is_at_intersection else 0
@@ -258,6 +320,12 @@ def IsAtInter(world_matrix, intersect_matrix, agents, entity1):
             return 0
 
 def IsInInter(world_matrix, intersect_matrix, agents, entity1):
+    """
+    [MODIFIED] Check if entity is inside an intersection.
+    
+    For GNA global entities: Uses pre-computed is_in_intersection from GNA.
+    For local FOV entities: Uses intersection_matrix lookup (local coordinates).
+    """
     if "PH" in entity1:
         return 0
     _, agent_type, layer_id = entity1.split("_")
@@ -270,7 +338,7 @@ def IsInInter(world_matrix, intersect_matrix, agents, entity1):
     
     agent_obj = agents.get(str(layer_id), agents.get(f"ego_{layer_id}"))
     
-    # Check if this is a global entity (not in FOV matrix)
+    # [ADDED] GNA global entity handling - use pre-computed intersection state
     if hasattr(agent_obj, 'in_fov_matrix') and not agent_obj.in_fov_matrix:
         # Use pre-computed intersection info from GNA
         return 1 if agent_obj.is_in_intersection else 0
@@ -290,7 +358,17 @@ def IsInInter(world_matrix, intersect_matrix, agents, entity1):
     else:
         return 0
 
+# =============================================================================
+# [MODIFIED] SPATIAL PREDICATES - Now use _get_entity_position for consistency
+# =============================================================================
+# All spatial predicates (IsClose, CollidingClose, LeftOf, RightOf, NextTo) now:
+# 1. Use _get_entity_position() to get positions in WORLD coordinates
+# 2. Support both local FOV entities and GNA global entities
+# 3. Ensure consistent distance/direction calculations across all entity types
+# =============================================================================
+
 def IsClose(world_matrix, intersect_matrix, agents, entity1, entity2):
+    """[MODIFIED] Uses world coordinates via _get_entity_position()."""
     if entity1 == entity2:
         return 0
     if "PH" in entity1 or "PH" in entity2:
@@ -301,6 +379,7 @@ def IsClose(world_matrix, intersect_matrix, agents, entity1, entity2):
     layer_id1 = int(layer_id1)
     layer_id2 = int(layer_id2)
     
+    # [MODIFIED] Use helper function for consistent world coordinates
     agent_position1 = _get_entity_position(world_matrix, agents, entity1, agent_type1, layer_id1)
     agent_position2 = _get_entity_position(world_matrix, agents, entity2, agent_type2, layer_id2)
     

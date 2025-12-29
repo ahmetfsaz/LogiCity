@@ -144,6 +144,15 @@ class Z3PlannerRL(Z3Planner):
         self.last_rl_obs = None
         return fail, reward
 
+    # =========================================================================
+    # [MODIFIED] break_world_matrix for RL agents
+    # =========================================================================
+    # Key changes:
+    # 1. Computes world_pos (absolute coordinates) for all local FOV entities
+    # 2. Integrates global entities from GNA broadcast (via agent.global_entities)
+    # 3. Applies max_local_entities and max_global_entities limits for RL agents
+    # 4. Ensures consistent coordinate system for spatial predicate calculations
+    # =========================================================================
     def break_world_matrix(self, world_matrix, agents, intersect_matrix, layerid2listid, rl_agent):
         ego_agent = {}
         partial_agents = {}
@@ -171,19 +180,35 @@ class Z3PlannerRL(Z3Planner):
             local_entities_list = []  # Track local FOV entities for potential limiting
             
             # Collect local FOV entities
+            # [MODIFIED] Now computes and stores WORLD coordinates for all local entities
             for layer_id in range(partial_world_squeezed.shape[0]):
                 layer = partial_world_squeezed[layer_id]
                 layer_nonzero_int = torch.logical_and(layer != 0, layer == layer.to(torch.int64))
                 if layer_nonzero_int.nonzero().shape[0] > 1:
                     continue
-                non_zero_values = int(layer[layer_nonzero_int.nonzero()[0][0], layer_nonzero_int.nonzero()[0][1]])
+                
+                # Get LOCAL position within the FOV crop
+                local_pos = layer_nonzero_int.nonzero()[0]
+                local_x, local_y = int(local_pos[0]), int(local_pos[1])
+                
+                # [ADDED] Convert to WORLD coordinates by adding FOV offset
+                # This ensures consistent coordinate system with GNA global entities
+                world_x = local_x + x_start
+                world_y = local_y + y_start
+                world_pos = [world_x, world_y]
+                
+                non_zero_values = int(layer[local_x, local_y])
                 agent_type = LABEL_MAP[non_zero_values]
                 # find this agent
                 other_agent_layer_id = int(non_zero_layer_indices[layer_id])
                 other_agent = agents[layerid2listid[other_agent_layer_id]]
                 assert other_agent.type == agent_type
                 
-                pseudo_agent = PesudoAgent(agent_type, layer_id, other_agent.concepts, other_agent.last_move_dir)
+                # [MODIFIED] Pass world_pos to PesudoAgent for consistent coordinate system
+                pseudo_agent = PesudoAgent(
+                    agent_type, layer_id, other_agent.concepts, other_agent.last_move_dir,
+                    world_pos=world_pos, in_fov_matrix=True
+                )
                 is_ego = (other_agent_layer_id == agent.layer_id)
                 local_entities_list.append((layer_id, pseudo_agent, is_ego, other_agent_layer_id))
             
@@ -213,13 +238,7 @@ class Z3PlannerRL(Z3Planner):
                 # Add global entities from GNA broadcast (up to max_global)
                 global_count = 0
                 if hasattr(agent, 'global_entities') and agent.global_entities and max_global > 0:
-                    # Sort global entities by priority (lower priority value = higher priority)
-                    sorted_global = sorted(
-                        agent.global_entities.items(),
-                        key=lambda x: x[1].concepts.get('priority', 999)
-                    )
-                    
-                    for global_agent_id, global_entity in sorted_global:
+                    for global_agent_id, global_entity in agent.global_entities.items():
                         if global_count >= max_global:
                             break
                         
@@ -248,7 +267,12 @@ class Z3PlannerRL(Z3Planner):
                 }
                 layer_id = len(local_entities_list)
                 while current_count < total_entities:
-                    place_holder_agent = PesudoAgent("PH", layer_id, ph_concepts, None)
+                    # [MODIFIED] Placeholders use dummy world_pos [-1, -1]
+                    # Spatial predicates check for "PH" and skip them, so position doesn't matter
+                    place_holder_agent = PesudoAgent(
+                        "PH", layer_id, ph_concepts, None,
+                        world_pos=[-1, -1], in_fov_matrix=False
+                    )
                     partial_agent["PH_{}".format(layer_id)] = place_holder_agent
                     layer_id += 1
                     current_count += 1

@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 class CityLoader:
     @staticmethod
+    # [MODIFIED] Added **kwargs to accept additional config parameters (e.g., GNA settings)
     def from_yaml(map_yaml_file,
                   agent_yaml_file,
                   ontology_yaml_file,
@@ -26,8 +27,12 @@ class CityLoader:
                   agent_region=240,
                   **kwargs):
 
-        # Extract config from kwargs (for enable_gna and other settings)
-        # If config is passed directly, use it; otherwise reconstruct from individual kwargs
+        # =====================================================================
+        # [ADDED] Config Extraction for GNA and Sub-rule Analysis
+        # =====================================================================
+        # Extract config from kwargs (for enable_gna, gna_top_k, gna_selection_mode,
+        # enable_subrule_analysis, and other GNA-related settings).
+        # If 'config' is passed directly, use it; otherwise reconstruct from kwargs.
         if 'config' in kwargs:
             config = kwargs['config']
         else:
@@ -37,6 +42,7 @@ class CityLoader:
                 'rule_yaml_file', 'rule_type', 'rl', 'debug', 'rl_agent',
                 'use_multi', 'episode_cache', 'agent_region'
             ]}
+        # =====================================================================
 
         cached_observation = {
                 "Time_Obs": {},
@@ -65,6 +71,12 @@ class CityLoader:
             "ontology": ontology_yaml_file,
             "rule": rule_yaml_file
         }
+        # =====================================================================
+        # [MODIFIED] City instantiation now passes config for GNA initialization
+        # =====================================================================
+        # The config dictionary is passed to City/CityEnv/CityEnvES constructors,
+        # which use it to initialize GNA (enable_gna, gna_top_k, gna_selection_mode)
+        # and sub-rule analysis (enable_subrule_analysis).
         if rl:
             assert rl_agent is not None, "Please specify the RL agent! Use AgentType_ID format. \
                 See the agents file for options ({agent_yaml_file})."
@@ -78,6 +90,7 @@ class CityLoader:
         else:
             city = City(grid_size=(WORLD_SIZE, WORLD_SIZE), local_planner=rule_type, \
                         logic_engine_file=logic_engine_file, use_multi=use_multi, config=config)
+        # =====================================================================
         cached_observation["Static Info"]["Logic"]["Predicates"] = list(city.local_planner.predicates.keys())
         cached_observation["Static Info"]["Logic"]["Rules"] = city.local_planner.data["Rules"]
         logger.info("Local planner constructed!")

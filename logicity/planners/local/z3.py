@@ -17,27 +17,63 @@ logger = logging.getLogger(__name__)
 
 # used for grounding
 class PesudoAgent:
-    def __init__(self, type, layer_id, concepts, moving_direction, global_pos=None, in_fov_matrix=True):
+    """
+    [MODIFIED] Lightweight agent representation for Z3 reasoning.
+    
+    Now ALWAYS stores world_pos (absolute world coordinates) for ALL entities,
+    whether they come from local FOV or GNA global broadcast. This ensures
+    consistent coordinate systems across all spatial predicate calculations.
+    
+    Attributes:
+        type: Agent type ("Car" or "Pedestrian")
+        layer_id: Layer index in city_grid
+        concepts: Dict of agent attributes (ambulance, police, etc.)
+        moving_direction: "Left", "Right", "Up", "Down", or None
+        world_pos: [x, y] in ABSOLUTE WORLD coordinates (required for all entities)
+        in_fov_matrix: True if entity exists in local world_matrix, False for GNA entities
+        is_at_intersection: Pre-computed intersection state (for GNA entities)
+        is_in_intersection: Pre-computed intersection state (for GNA entities)
+    """
+    def __init__(self, type, layer_id, concepts, moving_direction, world_pos, 
+                 in_fov_matrix=True, is_at_intersection=False, is_in_intersection=False):
         self.type = type
         self.layer_id = layer_id
         self.type = concepts["type"]
         self.priority = concepts["priority"]
         self.concepts = concepts
         self.moving_direction = moving_direction
-        self.global_pos = global_pos  # Absolute position in the world (for global entities)
-        self.in_fov_matrix = in_fov_matrix  # Whether entity is in the local FOV world matrix
+        
+        # [CRITICAL] world_pos is now REQUIRED for ALL entities (local and global)
+        # This ensures consistent coordinate system for spatial predicates
+        self.world_pos = world_pos  # Absolute position in world coordinates
+        
+        # Whether entity is in the local FOV world_matrix
+        # True = local entity (also in matrix), False = GNA global entity (not in matrix)
+        self.in_fov_matrix = in_fov_matrix
+        
+        # Pre-computed intersection states (used for GNA entities to avoid matrix lookup)
+        # For local entities, these can be computed from intersection_matrix if needed
+        self.is_at_intersection = is_at_intersection
+        self.is_in_intersection = is_in_intersection
 
 class Z3Planner(LocalPlanner):
+    # =========================================================================
+    # [MODIFIED] Constructor now initializes sub-rule analysis infrastructure
+    # =========================================================================
     def __init__(self, logic_engine_file):
         # Store the rule file path for determining rule type
         self.rule_file_path = logic_engine_file['rule']
 
         super().__init__(logic_engine_file)
 
-        # Hard-coded sub-rules for each rule type
+        # =====================================================================
+        # [ADDED] SUB-RULE ANALYSIS INITIALIZATION
+        # =====================================================================
+        # Hard-coded sub-rules for each rule type (expert vs easy)
+        # Used to track observability/satisfiability of individual sub-rules
         self.sub_rules = self._get_hardcoded_subrules()
 
-        # Tally counters for simulation-wide statistics
+        # Tally counters for simulation-wide statistics (per-agent)
         # NOTE: These accumulate once per agent per timestep.
         # With N agents, these grow by N * (number of sub-rules) per timestep.
         self.total_fully_observed = 0
@@ -45,13 +81,14 @@ class Z3Planner(LocalPlanner):
         self.total_fully_unobserved = 0
         self.total_agent_analyses = 0  # Track number of agent analyses for normalization
 
-        # Global oracle tally counters
+        # Global oracle tally counters (world-level, perfect knowledge)
         # NOTE: These accumulate once per timestep (single oracle analysis).
         # These grow by (number of sub-rules) per timestep, regardless of agent count.
         self.global_total_fully_observed = 0
         self.global_total_partially_observed = 0
         self.global_total_fully_unobserved = 0
         self.global_oracle_analyses = 0  # Track number of oracle analyses
+        # =====================================================================
 
     def _get_hardcoded_subrules(self):
         """Return hard-coded sub-rules dictionary based on rule file type."""
@@ -346,23 +383,26 @@ class Z3Planner(LocalPlanner):
             Tuple of (local_gna_score, entity_count)
         """
         local_gna_score = 0
-        entities_counted = set()  # Track entity IDs to avoid double-counting
+        # Track by layer_id (integer) to avoid double-counting entities that appear
+        # in both FOV and GNA broadcast. layer_id is unique per entity in the simulation.
+        entities_counted = set()
         
         # 1. Count ego agent
         if hasattr(ego_agent, 'concepts') and ego_agent.concepts:
             ego_type = self._get_entity_type_from_concepts(ego_agent.concepts)
             if ego_type:
-                ego_id = f"ego_{ego_agent.id}"
+                # Use layer_id as unique identifier (consistent across all sources)
+                entity_id = ego_agent.layer_id
                 local_gna_score += ENTITY_OCCURRENCE_SCORES.get(ego_type, 0)
-                entities_counted.add(ego_id)
+                entities_counted.add(entity_id)
         
         # 2. Count FOV entities (partial_agents)
         for agent_name, agent in partial_agents.items():
             if hasattr(agent, 'concepts') and agent.concepts:
                 entity_type = self._get_entity_type_from_concepts(agent.concepts)
                 if entity_type:
-                    # Use layer_id to uniquely identify entity
-                    entity_id = f"fov_{agent.layer_id}"
+                    # Use layer_id as unique identifier
+                    entity_id = agent.layer_id
                     if entity_id not in entities_counted:
                         local_gna_score += ENTITY_OCCURRENCE_SCORES.get(entity_type, 0)
                         entities_counted.add(entity_id)
@@ -370,15 +410,14 @@ class Z3Planner(LocalPlanner):
         # 3. Count GNA broadcast entities (avoid double-counting with FOV)
         if gna_broadcast and 'global_context' in gna_broadcast:
             for agent_id, agent_data in gna_broadcast['global_context'].items():
-                # Check if this entity is already counted in FOV
-                # Extract layer_id from agent_id (format: "Type_layerid")
-                gna_entity_id = f"gna_{agent_id}"
-                if gna_entity_id not in entities_counted:
+                # Extract layer_id from agent_properties to match with FOV entities
+                layer_id = agent_data['agent_properties'].get('layer_id')
+                if layer_id is not None and layer_id not in entities_counted:
                     concepts = agent_data['agent_properties'].get('concepts', {})
                     entity_type = self._get_entity_type_from_concepts(concepts)
                     if entity_type:
                         local_gna_score += ENTITY_OCCURRENCE_SCORES.get(entity_type, 0)
-                        entities_counted.add(gna_entity_id)
+                        entities_counted.add(layer_id)
         
         return local_gna_score, len(entities_counted)
 
@@ -709,7 +748,22 @@ class Z3Planner(LocalPlanner):
 
         return unique_variables
 
+    # =========================================================================
+    # [MODIFIED] plan() now accepts GNA broadcast and sub-rule analysis flags
+    # =========================================================================
     def plan(self, world_matrix, intersect_matrix, agents, layerid2listid, use_multiprocessing=True, gna_broadcast=None, enable_subrule_analysis=False):
+        """
+        [MODIFIED] Plan actions for all agents.
+        
+        New Parameters:
+            gna_broadcast: Global context from GNA (passed to sub-rule analysis)
+            enable_subrule_analysis: Whether to track sub-rule observability/satisfiability
+            
+        Returns:
+            Tuple of (combined_results, subrule_analysis)
+            - combined_results: Action distributions per agent
+            - subrule_analysis: Sub-rule analysis results (empty dict if disabled)
+        """
         # 1. Break the global world matrix into local world matrix and split the agents and intersections
         # Note that the local ones will have different size and agent id
         e = time.time()
@@ -719,7 +773,9 @@ class Z3Planner(LocalPlanner):
             self.break_world_matrix(local_world_matrix, agents, local_intersections, layerid2listid)
         logger.info("Break world time: {}".format(time.time()-e))
 
-        # 3. Perform sub-rule analysis if enabled
+        # =====================================================================
+        # [ADDED] SUB-RULE ANALYSIS - Track observability and informativeness
+        # =====================================================================
         subrule_analysis = {}
         if enable_subrule_analysis:
             logger.info("Performing sub-rule satisfiability analysis...")
@@ -836,7 +892,20 @@ class Z3Planner(LocalPlanner):
             y_end = min(position[1]+AGENT_FOV+1, height)
         return x_start, y_start, x_end, y_end
 
+    # =========================================================================
+    # [MODIFIED] break_world_matrix now converts local coords to world coords
+    # and integrates global entities from GNA broadcast
+    # =========================================================================
     def break_world_matrix(self, world_matrix, agents, intersect_matrix, layerid2listid):
+        """
+        Break global world into per-agent local views.
+        
+        [MODIFIED] Key changes for coordinate system consistency:
+        1. Local FOV entities: Computes world_pos by adding FOV offset (x_start, y_start)
+           to local positions, ensuring all entities have absolute world coordinates
+        2. GNA entities: Directly uses world_pos from GlobalPseudoAgent (already absolute)
+        3. All PesudoAgent instances now have consistent world_pos for spatial predicates
+        """
         ego_agent = {}
         partial_agents = {}
         partial_world = {}
@@ -861,37 +930,60 @@ class Z3Planner(LocalPlanner):
             partial_agent = {}
 
             # First, add local agents (existing logic)
+            # [MODIFIED] Now computes and stores WORLD coordinates for all local entities
             for layer_id in range(partial_world_squeezed.shape[0]):
                 layer = partial_world_squeezed[layer_id]
                 layer_nonzero_int = torch.logical_and(layer != 0, layer == layer.to(torch.int64))
                 if layer_nonzero_int.nonzero().shape[0] > 1:
                     continue
-                non_zero_values = int(layer[layer_nonzero_int.nonzero()[0][0], layer_nonzero_int.nonzero()[0][1]])
+                
+                # Get LOCAL position within the FOV crop
+                local_pos = layer_nonzero_int.nonzero()[0]
+                local_x, local_y = int(local_pos[0]), int(local_pos[1])
+                
+                # [ADDED] Convert to WORLD coordinates by adding FOV offset
+                # This ensures consistent coordinate system with GNA global entities
+                world_x = local_x + x_start
+                world_y = local_y + y_start
+                world_pos = [world_x, world_y]
+                
+                non_zero_values = int(layer[local_x, local_y])
                 agent_type = LABEL_MAP[non_zero_values]
                 # find this agent
                 other_agent_layer_id = int(non_zero_layer_indices[layer_id])
                 other_agent = agents[layerid2listid[other_agent_layer_id]]
                 assert other_agent.type == agent_type
+                
+                # [MODIFIED] Pass world_pos to PesudoAgent for consistent coordinate system
                 if other_agent_layer_id == agent.layer_id:
-                    partial_agent["ego_{}".format(layer_id)] = PesudoAgent(agent_type, layer_id, other_agent.concepts, other_agent.last_move_dir)
+                    partial_agent["ego_{}".format(layer_id)] = PesudoAgent(
+                        agent_type, layer_id, other_agent.concepts, other_agent.last_move_dir,
+                        world_pos=world_pos, in_fov_matrix=True
+                    )
                 else:
-                    partial_agent[str(layer_id)] = PesudoAgent(agent_type, layer_id, other_agent.concepts, other_agent.last_move_dir)
+                    partial_agent[str(layer_id)] = PesudoAgent(
+                        agent_type, layer_id, other_agent.concepts, other_agent.last_move_dir,
+                        world_pos=world_pos, in_fov_matrix=True
+                    )
 
             # Second, add global entities from GNA broadcast
+            # [MODIFIED] Global entities now use consistent world_pos parameter
             if hasattr(agent, 'global_entities') and agent.global_entities:
                 global_layer_offset = len(non_zero_layer_indices)  # Start global entities after local ones
                 for global_agent_id, global_entity in agent.global_entities.items():
-                    # Convert global position to local FOV coordinates
-                    global_pos = global_entity.pos
-                    if isinstance(global_pos, list):
-                        global_pos = torch.tensor(global_pos)
+                    # Get global entity's world position
+                    entity_world_pos = global_entity.pos
+                    if isinstance(entity_world_pos, list):
+                        entity_world_pos_tensor = torch.tensor(entity_world_pos)
+                    else:
+                        entity_world_pos_tensor = entity_world_pos
 
                     # Check if global entity is within FOV bounds
-                    if (x_start <= global_pos[0] < x_end and
-                        y_start <= global_pos[1] < y_end):
+                    if (x_start <= entity_world_pos_tensor[0] < x_end and
+                        y_start <= entity_world_pos_tensor[1] < y_end):
                         # Entity is within FOV - add it
-                        local_x = global_pos[0] - x_start
-                        local_y = global_pos[1] - y_start
+                        local_x = int(entity_world_pos_tensor[0] - x_start)
+                        local_y = int(entity_world_pos_tensor[1] - y_start)
 
                         # Add to partial_world_squeezed if not already there
                         # Find or create layer for this global entity
@@ -906,16 +998,23 @@ class Z3Planner(LocalPlanner):
                             # Update partial_world
                             partial_world[ego_name] = partial_world_squeezed
 
-                        # Add global entity to partial_agent
+                        # [MODIFIED] Add global entity with world_pos in WORLD coordinates
+                        # Convert list to proper format if needed
+                        world_pos = entity_world_pos if isinstance(entity_world_pos, list) else entity_world_pos_tensor.tolist()
+                        
                         global_pseudo_id = f"global_{global_agent_id.split('_')[1]}"  # Use layer ID from global entity
                         partial_agent[global_pseudo_id] = PesudoAgent(
                             global_entity.type,
                             global_entity.layer_id,
                             global_entity.concepts,
-                            global_entity.last_move_dir
+                            global_entity.last_move_dir,
+                            world_pos=world_pos,
+                            in_fov_matrix=False,  # Global entity not in local matrix
+                            is_at_intersection=getattr(global_entity, 'is_at_intersection', False),
+                            is_in_intersection=getattr(global_entity, 'is_in_intersection', False)
                         )
 
-                        logger.debug(f"Z3: Added global entity {global_agent_id} to {ego_name}'s local reasoning at position ({local_x}, {local_y})")
+                        logger.debug(f"Z3: Added global entity {global_agent_id} to {ego_name}'s local reasoning at world_pos={world_pos}")
 
             partial_agents[ego_name] = partial_agent
         return ego_agent, partial_agents, partial_world, partial_intersection

@@ -8,6 +8,7 @@ from ..utils.vis import visualize_city
 from ..utils.gym_wrapper import GymCityWrapper
 
 class CityEnvES(CityEnv):
+    # [MODIFIED] Added config parameter to pass GNA and sub-rule analysis settings to parent CityEnv class
     def __init__(self, grid_size, local_planner, logic_engine_file, rl_agent, use_multi=False, config=None):
         super().__init__(grid_size, local_planner, logic_engine_file, rl_agent, use_multi=use_multi, config=config)
         self.rl_agent = rl_agent
@@ -66,15 +67,19 @@ class CityEnvES(CityEnv):
         current_obs["Expert_sg"] = []
         current_obs["Ground_dic"] = []
 
-        # GNA Phase 1: Collect pre-grounding data from all agents
-        # GNA Phase 2: Broadcast global context to all agents
+        # =====================================================================
+        # [ADDED] GNA ORCHESTRATION - Global Entity Collection & Broadcasting
+        # =====================================================================
+        # GNA Phase 1: Collect pre-grounding data from all agents (positions, FOV entities)
+        # GNA Phase 2: Rank and filter to top-k entities, then broadcast to all agents
         gna_broadcast = self.gna.orchestrate_global_reasoning(self)
-        # Phase 3: Make broadcast available to all agents
+        # Phase 3: Distribute broadcast so agents can use global entities in Z3 reasoning
         self.set_global_context_for_agents(gna_broadcast)
+        # =====================================================================
 
         new_matrix = torch.zeros_like(self.city_grid)
         current_world = self.city_grid.clone()
-        # Agents now perform local planning with global context available
+        # [MODIFIED] Agents now perform local planning with global context available (if GNA enabled)
         agent_action_dist = self.local_planner.plan(current_world, self.intersection_matrix, self.agents, \
                                                     self.layer_id2agent_list_id, use_multiprocessing=self.use_multi, rl_agent=idx)
         # Then do global action taking acording to the local planning results

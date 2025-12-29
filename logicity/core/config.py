@@ -94,8 +94,20 @@ CLOSE_RANGE_MAX = 20
 NUM_PROCESS = 4
 AGENT_FOV = 25 # better be larger than intersection width
 
-# Entity type criticality scores based on occurrence count in expert sub-rules
-# Used for informativeness calculations
+# =============================================================================
+# [ADDED] Entity Occurrence Scores for SUB-RULE ANALYSIS (z3.py)
+# =============================================================================
+# These scores represent the RAW OCCURRENCE COUNT of each entity type in
+# expert sub-rules. Used ONLY in z3.py for informativeness calculations
+# during sub-rule analysis (calculate_local_gna_informativeness).
+#
+# NOTE: This is DIFFERENT from the entity_priority_map in gna.py!
+#   - ENTITY_OCCURRENCE_SCORES (here): Pure occurrence counts for sub-rule analysis
+#   - entity_priority_map (gna.py): Goal-oriented weighted ratios for GNA ranking
+#
+# The two serve different purposes:
+#   - Sub-rule analysis: How often does this entity type appear in rules?
+#   - GNA ranking: How important is this entity for goal-oriented decision making?
 ENTITY_OCCURRENCE_SCORES = {
     "Ambulance": 7,  # 7 occurrences in sub-rules
     "Old": 6,        # 6 occurrences
@@ -107,6 +119,7 @@ ENTITY_OCCURRENCE_SCORES = {
     "Young": 2,      # 2 occurrences
     "Car": 1         # 1 occurrence
 }
+# =============================================================================
 ACTION2NAME = {
     0: "Left",
     1: "Right",

@@ -24,7 +24,10 @@ simulation:
       2: [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0]
       3: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
     fov_entities:
-      Entity: 5                        # Maximum number of entities in the FOV, include the RL agent
+      Entity: 5                        # Maximum number of agents total (local + global)
+      max_local_entities: 3            # Maximum number of entities from local FOV
+      max_global_entities: 2           # Maximum number of entities from GNA broadcast
+# Maximum number of entities in the FOV, include the RL agent
     action_cost:
       0: -2
       1: 0

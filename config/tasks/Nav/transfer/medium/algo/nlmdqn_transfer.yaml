@@ -8,6 +8,9 @@ simulation:
   rl: true
   debug: false
   use_multi: false
+  enable_gna: true
+  gna_top_k: 3
+  gna_selection_mode: priority  # "priority" or "random"
   agent_region: 100
   rl_agent: 
     max_priority: 6
@@ -21,7 +24,10 @@ simulation:
       2: [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0]
       3: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
     fov_entities:
-      Entity: 5                        # Maximum number of entities in the FOV, include the RL agent
+      Entity: 5                        # Maximum number of agents total (local + global)
+      max_local_entities: 3            # Maximum number of entities from local FOV
+      max_global_entities: 2           # Maximum number of entities from GNA broadcast
+# Maximum number of entities in the FOV, include the RL agent
     action_cost:
       0: -2
       1: 0
@@ -43,6 +49,9 @@ eval_checkpoint:
     rl: true
     debug: false
     use_multi: false
+    enable_gna: true
+    gna_top_k: 3
+    gna_selection_mode: priority  # "priority" or "random"
     agent_region: 120
     rl_agent: 
       max_priority: 9
@@ -56,7 +65,9 @@ eval_checkpoint:
         2: [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0]
         3: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
       fov_entities:
-        Entity: 5                        # Maximum number of agents in the FOV, include the RL agent
+        Entity: 5                        # Maximum number of agents total (local + global)
+        max_local_entities: 3            # Maximum number of entities from local FOV
+        max_global_entities: 2           # Maximum number of entities from GNA broadcast
       action_cost:
         0: -2
         1: 0

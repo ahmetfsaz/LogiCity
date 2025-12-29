@@ -1,5 +1,6 @@
 from .building import Building
 from ..planners import LPlanner_mapper
+# [ADDED] Import GNA for global entity awareness across agents
 from ..agents.gna import GlobalNavigationAssistant
 import time
 import numpy as np
@@ -17,6 +18,7 @@ from ..utils.gen import gen_occ
 logger = logging.getLogger(__name__)
 
 class City:
+    # [MODIFIED] Added config parameter to support GNA and sub-rule analysis configuration
     def __init__(self, grid_size, local_planner, logic_engine_file=None, use_multi=False, config=None):
         self.grid_size = grid_size
         self.layers = BASIC_LAYER
@@ -36,7 +38,17 @@ class City:
         self.local_planner = LPlanner_mapper[local_planner](logic_engine_file)
         self.use_multi = use_multi
         self.logic_grounds = {}
-        # Global Navigation Assistant for enhanced coordination
+        
+        # =====================================================================
+        # [ADDED] Global Navigation Assistant (GNA) Configuration
+        # =====================================================================
+        # GNA provides agents with awareness of entities beyond their local FOV.
+        # It collects data from all agents, ranks entities by priority/relevance,
+        # and broadcasts top-k entities to enhance each agent's Z3 reasoning.
+        # Config options:
+        #   - enable_gna: Turn GNA on/off
+        #   - gna_top_k: Max number of global entities to broadcast
+        #   - gna_selection_mode: 'priority' (rule-based) or 'random'
         enable_gna = config.get('enable_gna', False) if config else False
         gna_top_k = config.get('gna_top_k', 5) if config else 5
         gna_selection_mode = config.get('gna_selection_mode', 'priority') if config else 'priority'
@@ -44,24 +56,42 @@ class City:
         if not enable_gna:
             self.gna.disable()
 
-        # Sub-rule analysis configuration
+        # [ADDED] Sub-rule analysis tracks observability/satisfiability of logical sub-rules
+        # Useful for understanding which parts of rules are grounded during reasoning.
         self.enable_subrule_analysis = config.get('enable_subrule_analysis', False) if config else False
 
         logger.info(f"City initialized with GNA: {'ENABLED' if enable_gna else 'DISABLED'}, Top-K: {gna_top_k}, Selection: {gna_selection_mode}")
         logger.info(f"Sub-rule analysis: {'ENABLED' if self.enable_subrule_analysis else 'DISABLED'}")
+        # =====================================================================
         # vis color map
         self.color_map = COLOR_MAP
 
+    # =========================================================================
+    # [ADDED] GNA BROADCAST DISTRIBUTION METHOD
+    # =========================================================================
     def set_global_context_for_agents(self, broadcast):
-        """Set the global context broadcast for all agents to use in their reasoning."""
+        """
+        [ADDED] Distribute GNA broadcast to all agents.
+        
+        After GNA collects and filters global entity data, this method pushes
+        the broadcast to each agent. Agents then convert broadcast data into
+        GlobalPseudoAgent objects (in basic.py) for use in Z3 reasoning.
+        
+        Args:
+            broadcast: Dictionary containing filtered global entities and metadata.
+                       None if GNA is disabled or no entities to broadcast.
+        """
         if broadcast is None:
             return
 
         logger.debug(f"GNA: Distributing broadcast {broadcast['broadcast_id']} to {len(self.agents)} agents")
         for agent in self.agents:
             if agent is not None:
+                # Each agent's receive_global_context() (in basic.py) will process
+                # this broadcast and populate agent.global_entities for Z3.
                 agent.receive_global_context(broadcast)
         logger.debug("GNA: Broadcast distribution completed")
+    # =========================================================================
 
     def update(self):
         current_obs = {}
@@ -69,22 +99,40 @@ class City:
         current_obs["World"] = self.city_grid.clone()
         current_obs["Agent_actions"] = []
 
-        # GNA Phase 1: Collect pre-grounding data from all agents
-        # GNA Phase 2: Broadcast global context to all agents
+        # =====================================================================
+        # [ADDED] GNA ORCHESTRATION - Global Entity Collection & Broadcasting
+        # =====================================================================
+        # This is the main GNA entry point each timestep:
+        #   1. Collects pre-grounding data from all agents (positions, states, FOV)
+        #   2. Ranks entities by priority (based on rule relevance)
+        #   3. Filters to top-k entities
+        #   4. Broadcasts filtered context back to all agents
+        # Returns None if GNA is disabled.
         gna_broadcast = self.gna.orchestrate_global_reasoning(self)
+        # =====================================================================
 
         new_matrix = torch.zeros_like(self.city_grid)
         current_world = self.city_grid.clone()
-        # Agents now perform local planning with global context available
+        
+        # =====================================================================
+        # [MODIFIED] LOCAL PLANNER CALL - Now includes GNA and sub-rule analysis
+        # =====================================================================
+        # The local planner (Z3) now receives:
+        #   - gna_broadcast: Global entities to include in reasoning (via agent.global_entities)
+        #   - enable_subrule_analysis: Whether to track sub-rule observability/satisfiability
+        # Returns:
+        #   - agent_action_dist: Action distributions for each agent
+        #   - subrule_analysis: Dictionary of sub-rule analysis results (if enabled)
         agent_action_dist, subrule_analysis = self.local_planner.plan(
             current_world, self.intersection_matrix, self.agents,
             self.layer_id2agent_list_id, use_multiprocessing=self.use_multi,
             gna_broadcast=gna_broadcast, enable_subrule_analysis=self.enable_subrule_analysis
         )
 
-        # Store sub-rule analysis if enabled
+        # [ADDED] Store sub-rule analysis in observations for downstream use
         if self.enable_subrule_analysis:
             current_obs["Subrule_Analysis"] = subrule_analysis
+        # =====================================================================
         # Then do global action taking acording to the local planning results
         # get occupancy map
         for agent in self.agents:

@@ -88,27 +88,6 @@ def IsBus(world_matrix, intersect_matrix, agents, entity):
     else:
         return 0
     
-def IsTiro(world_matrix, intersect_matrix, agents, entity):
-    assert "Agent" in entity
-    if "Pedestrian" in entity:
-        return 0
-    if "PH" in entity:
-        return 0
-    _, _, layer_id = entity.split("_")
-    if layer_id in agents.keys():
-        agent_concept = agents[layer_id].concepts
-    elif "ego_{}".format(layer_id) in agents.keys():
-        agent_concept = agents["ego_{}".format(layer_id)].concepts
-    elif "global_{}".format(layer_id) in agents.keys():
-        agent_concept = agents["global_{}".format(layer_id)].concepts
-    else:
-        # Entity not found in any expected location
-        return 0
-    if "tiro" in agent_concept:
-        return 1
-    else:
-        return 0
-    
 def IsPolice(world_matrix, intersect_matrix, agents, entity):
     if "Pedestrian" in entity:
         return 0
@@ -285,12 +264,10 @@ def IsAtInter(world_matrix, intersect_matrix, agents, entity1):
     _, agent_type, layer_id = entity1.split("_")
     layer_id = int(layer_id)
     
-    # Check if entity is in agents dict (could be ego or regular entity)
-    agent_key = str(layer_id) if str(layer_id) in agents.keys() else f"ego_{layer_id}"
-    if agent_key not in agents.keys() and f"ego_{layer_id}" not in agents.keys():
+    # [FIXED] Check for all possible key formats including global entities
+    agent_obj = agents.get(str(layer_id), agents.get(f"ego_{layer_id}", agents.get(f"global_{layer_id}")))
+    if agent_obj is None:
         return 0  # Entity not found
-    
-    agent_obj = agents.get(str(layer_id), agents.get(f"ego_{layer_id}"))
     
     # [ADDED] GNA global entity handling - use pre-computed intersection state
     if hasattr(agent_obj, 'in_fov_matrix') and not agent_obj.in_fov_matrix:
@@ -331,12 +308,10 @@ def IsInInter(world_matrix, intersect_matrix, agents, entity1):
     _, agent_type, layer_id = entity1.split("_")
     layer_id = int(layer_id)
     
-    # Check if entity is in agents dict
-    agent_key = str(layer_id) if str(layer_id) in agents.keys() else f"ego_{layer_id}"
-    if agent_key not in agents.keys() and f"ego_{layer_id}" not in agents.keys():
-        return 0
-    
-    agent_obj = agents.get(str(layer_id), agents.get(f"ego_{layer_id}"))
+    # [FIXED] Check for all possible key formats including global entities
+    agent_obj = agents.get(str(layer_id), agents.get(f"ego_{layer_id}", agents.get(f"global_{layer_id}")))
+    if agent_obj is None:
+        return 0  # Entity not found
     
     # [ADDED] GNA global entity handling - use pre-computed intersection state
     if hasattr(agent_obj, 'in_fov_matrix') and not agent_obj.in_fov_matrix:
@@ -500,7 +475,8 @@ def LeftOf(world_matrix, intersect_matrix, agents, entity1, entity2):
         return 0
     
     # Get the direction of entity2
-    agent_obj2 = agents.get(str(layer_id2), agents.get(f"ego_{layer_id2}"))
+    # [FIXED] Added global_{layer_id} lookup for GNA global entities
+    agent_obj2 = agents.get(str(layer_id2), agents.get(f"ego_{layer_id2}", agents.get(f"global_{layer_id2}")))
     if agent_obj2 is None:
         agent2_dire = None
     else:
@@ -541,7 +517,8 @@ def RightOf(world_matrix, intersect_matrix, agents, entity1, entity2):
         return 0
     
     # Get the direction of entity2
-    agent_obj2 = agents.get(str(layer_id2), agents.get(f"ego_{layer_id2}"))
+    # [FIXED] Added global_{layer_id} lookup for GNA global entities
+    agent_obj2 = agents.get(str(layer_id2), agents.get(f"ego_{layer_id2}", agents.get(f"global_{layer_id2}")))
     if agent_obj2 is None:
         agent2_dire = None
     else:

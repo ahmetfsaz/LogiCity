@@ -249,12 +249,24 @@ class Z3PlannerRL(Z3Planner):
                                for _, _, _, other_agent_layer_id in local_entities_list):
                             continue
                         
-                        # Global entity carries its own position and intersection info
-                        # No need to access world_matrix - all info is in global_entity
-                        # The global_entity already has: pos, is_at_intersection, is_in_intersection
+                        # [FIXED] Convert GlobalPseudoAgent to PesudoAgent for consistent interface
+                        # GlobalPseudoAgent has 'pos' but predicates expect 'world_pos'
+                        # This conversion ensures spatial predicates work correctly for global entities
+                        world_pos = global_entity.pos if isinstance(global_entity.pos, list) else list(global_entity.pos)
                         
-                        # Add global entity to partial_agent with layer_id as key
-                        partial_agent[str(global_entity.layer_id)] = global_entity
+                        # [FIXED] Use "global_" prefix to avoid key collision with local entities
+                        # Local entities use INDEX as key (0, 1, 2, ...), global entities use ORIGINAL layer_id
+                        # Without prefix, global entity with layer_id=3 would overwrite local entity at index 3
+                        partial_agent[f"global_{global_entity.layer_id}"] = PesudoAgent(
+                            global_entity.type,
+                            global_entity.layer_id,
+                            global_entity.concepts,
+                            global_entity.last_move_dir,
+                            world_pos=world_pos,
+                            in_fov_matrix=False,  # Global entity not in local FOV matrix
+                            is_at_intersection=getattr(global_entity, 'is_at_intersection', False),
+                            is_in_intersection=getattr(global_entity, 'is_in_intersection', False)
+                        )
                         global_count += 1
                     
                     logger.debug(f"Agent {ego_name}: Added {global_count} global entities from GNA broadcast (max: {max_global})")

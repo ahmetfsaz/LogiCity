@@ -70,11 +70,11 @@ class CityEnvES(CityEnv):
         # =====================================================================
         # [ADDED] GNA ORCHESTRATION - Global Entity Collection & Broadcasting
         # =====================================================================
-        # GNA Phase 1: Collect pre-grounding data from all agents (positions, FOV entities)
-        # GNA Phase 2: Rank and filter to top-k entities, then broadcast to all agents
-        gna_broadcast = self.gna.orchestrate_global_reasoning(self)
-        # Phase 3: Distribute broadcast so agents can use global entities in Z3 reasoning
-        self.set_global_context_for_agents(gna_broadcast)
+        # GNA orchestrate_global_reasoning() handles all 3 phases:
+        #   Phase 1: Collect pre-grounding data from all agents (positions, FOV entities)
+        #   Phase 2: Rank and filter to top-k entities
+        #   Phase 3: Broadcast to all agents (calls set_global_context_for_agents internally)
+        self.gna.orchestrate_global_reasoning(self)
         # =====================================================================
 
         new_matrix = torch.zeros_like(self.city_grid)

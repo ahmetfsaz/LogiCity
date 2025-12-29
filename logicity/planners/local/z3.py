@@ -36,10 +36,11 @@ class PesudoAgent:
     """
     def __init__(self, type, layer_id, concepts, moving_direction, world_pos, 
                  in_fov_matrix=True, is_at_intersection=False, is_in_intersection=False):
-        self.type = type
         self.layer_id = layer_id
-        self.type = concepts["type"]
-        self.priority = concepts["priority"]
+        # [FIXED] Use parameter as fallback if concepts doesn't have "type" key
+        # This prevents KeyError if concepts dict is malformed
+        self.type = concepts.get("type", type)
+        self.priority = concepts.get("priority", 1)
         self.concepts = concepts
         self.moving_direction = moving_direction
         
@@ -1002,7 +1003,9 @@ class Z3Planner(LocalPlanner):
                         # Convert list to proper format if needed
                         world_pos = entity_world_pos if isinstance(entity_world_pos, list) else entity_world_pos_tensor.tolist()
                         
-                        global_pseudo_id = f"global_{global_agent_id.split('_')[1]}"  # Use layer ID from global entity
+                        # [FIXED] Use global_entity.layer_id directly instead of parsing from global_agent_id
+                        # This ensures correct layer_id even if agent ID differs from layer_id
+                        global_pseudo_id = f"global_{global_entity.layer_id}"
                         partial_agent[global_pseudo_id] = PesudoAgent(
                             global_entity.type,
                             global_entity.layer_id,

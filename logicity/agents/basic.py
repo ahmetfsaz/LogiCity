@@ -6,6 +6,41 @@ from ..core.config import *
 # [ADDED] Logger for GNA-related debug messages
 logger = logging.getLogger(__name__)
 
+
+# =============================================================================
+# [ADDED] GlobalPseudoAgent - Intermediate agent representation for GNA → Z3
+# =============================================================================
+# This class bridges the gap between GNA's broadcast format and the PesudoAgent
+# format that Z3 expects. When Z3's break_world_matrix() processes global
+# entities, it reads GlobalPseudoAgent and creates the final PesudoAgent.
+#
+# [FIXED] Moved to module level to avoid recreating the class on every call
+# to _prepare_global_entity_for_z3(), improving efficiency.
+# =============================================================================
+class GlobalPseudoAgent:
+    """
+    Intermediate agent representation for GNA → Z3 conversion.
+    
+    Attributes match what Z3's break_world_matrix() expects to read:
+        - type, layer_id, concepts, pos, last_move_dir, goal, priority
+        - is_at_intersection, is_in_intersection (pre-computed by GNA)
+    """
+    def __init__(self, agent_type, layer_id, concepts, position, direction, goal, 
+                 is_at_intersection=False, is_in_intersection=False):
+        self.type = agent_type              # "Car" or "Pedestrian"
+        self.layer_id = layer_id            # Layer index in city_grid
+        self.concepts = concepts if concepts else {}  # Dict of agent attributes
+        self.pos = position                 # [x, y] in WORLD coordinates
+        self.last_move_dir = direction      # "Left", "Right", "Up", "Down", or None
+        self.goal = goal                    # [x, y] goal position
+        self.priority = concepts.get('priority', 1) if concepts else 1
+        
+        # Pre-computed intersection states (from GNA)
+        # These are needed because global entities can't look up the local
+        # intersection_matrix (which is cropped to the ego's FOV)
+        self.is_at_intersection = is_at_intersection
+        self.is_in_intersection = is_in_intersection
+
 class Agent:
     def __init__(self, size, id, world_state_matrix, concepts, init_info=None, debug=False, region=240):
         self.size = size
@@ -166,7 +201,7 @@ class Agent:
         RELATIONSHIP TO PesudoAgent (z3.py):
         ------------------------------------
         - PesudoAgent is the ORIGINAL class from the codebase (we only modified it)
-        - GlobalPseudoAgent is a NEW class we created for GNA integration
+        - GlobalPseudoAgent is a NEW class we created for GNA integration (module-level)
         - GlobalPseudoAgent is converted to PesudoAgent in break_world_matrix()
         - Both now use world_pos for consistent coordinate system
         
@@ -197,37 +232,7 @@ class Agent:
         """
         agent_properties = agent_data['agent_properties']
 
-        # Define GlobalPseudoAgent class
-        # This is an INTERMEDIATE format between GNA broadcast and Z3's PesudoAgent
-        class GlobalPseudoAgent:
-            """
-            [ADDED] Intermediate agent representation for GNA → Z3 conversion.
-            
-            This class bridges the gap between GNA's broadcast format and
-            the PesudoAgent format that Z3 expects. When Z3's break_world_matrix()
-            processes global entities, it reads GlobalPseudoAgent and creates
-            the final PesudoAgent with proper world_pos coordinates.
-            
-            Attributes match what Z3's break_world_matrix() expects to read:
-                - type, layer_id, concepts, pos, last_move_dir, goal, priority
-                - is_at_intersection, is_in_intersection (pre-computed by GNA)
-            """
-            def __init__(self, agent_type, layer_id, concepts, position, direction, goal, 
-                        is_at_intersection=False, is_in_intersection=False):
-                self.type = agent_type              # "Car" or "Pedestrian"
-                self.layer_id = layer_id            # Layer index in city_grid
-                self.concepts = concepts if concepts else {}  # Dict of agent attributes
-                self.pos = position                 # [x, y] in WORLD coordinates
-                self.last_move_dir = direction      # "Left", "Right", "Up", "Down", or None
-                self.goal = goal                    # [x, y] goal position
-                self.priority = concepts.get('priority', 1) if concepts else 1
-                
-                # Pre-computed intersection states (from GNA)
-                # These are needed because global entities can't look up the local
-                # intersection_matrix (which is cropped to the ego's FOV)
-                self.is_at_intersection = is_at_intersection
-                self.is_in_intersection = is_in_intersection
-
+        # [FIXED] Use module-level GlobalPseudoAgent class instead of defining inline
         # Create and return the GlobalPseudoAgent with data from GNA broadcast
         # Position is already in WORLD coordinates from GNA
         return GlobalPseudoAgent(

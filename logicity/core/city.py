@@ -2,6 +2,7 @@ from .building import Building
 from ..planners import LPlanner_mapper
 # [ADDED] Import GNA for global entity awareness across agents
 from ..agents.gna import GlobalNavigationAssistant
+from ..utils.sim_metrics import SimMetricsTracker
 import time
 import numpy as np
 import logging
@@ -43,25 +44,61 @@ class City:
         # [ADDED] Global Navigation Assistant (GNA) Configuration
         # =====================================================================
         # GNA provides agents with awareness of entities beyond their local FOV.
-        # It collects data from all agents, ranks entities by priority/relevance,
-        # and broadcasts top-k entities to enhance each agent's Z3 reasoning.
         # Config options:
         #   - enable_gna: Turn GNA on/off
-        #   - gna_top_k: Max number of global entities to broadcast
-        #   - gna_selection_mode: 'priority' (rule-based) or 'random'
+        #   - gna_top_k: Max number of entities to broadcast
+        #   - gna_selection_mode:
+        #       semantic         — per-agent grounding + inductive-probability
+        #       semantic_random  — per-agent grounding + random subset
+        #       ranking_priority — global type-based ranking (same to all)
+        #       ranking_random   — global random baseline (same to all)
         enable_gna = config.get('enable_gna', False) if config else False
         gna_top_k = config.get('gna_top_k', 5) if config else 5
-        gna_selection_mode = config.get('gna_selection_mode', 'priority') if config else 'priority'
-        self.gna = GlobalNavigationAssistant(top_k=gna_top_k, selection_mode=gna_selection_mode)
+        gna_selection_mode = config.get('gna_selection_mode', 'semantic') if config else 'semantic'
+        gna_top_k1 = config.get('gna_top_k1', 3) if config else 3
+        gna_top_k2 = config.get('gna_top_k2', 3) if config else 3
+        rule_yaml_file = config.get('rule_yaml_file', '') if config else ''
+        agent_region = config.get('agent_region', 240) if config else 240
+        self.gna = GlobalNavigationAssistant(
+            top_k=gna_top_k, selection_mode=gna_selection_mode,
+            rule_yaml_file=rule_yaml_file,
+            top_k1=gna_top_k1, top_k2=gna_top_k2,
+            agent_region=agent_region,
+        )
         if not enable_gna:
             self.gna.disable()
 
-        # [ADDED] Sub-rule analysis tracks observability/satisfiability of logical sub-rules
-        # Useful for understanding which parts of rules are grounded during reasoning.
-        self.enable_subrule_analysis = config.get('enable_subrule_analysis', False) if config else False
+        # Sub-rule analysis tracks observability/satisfiability of logical sub-rules.
+        # Only applicable to the global (ranking_*) pipelines; semantic pipelines
+        # use their own inductive-probability-based evaluation.
+        subrule_cfg = config.get('enable_subrule_analysis', False) if config else False
+        if subrule_cfg and gna_selection_mode.startswith("semantic"):
+            logger.info("Sub-rule analysis disabled: not applicable in "
+                        f"'{gna_selection_mode}' mode (only ranking_* modes)")
+            self.enable_subrule_analysis = False
+        else:
+            self.enable_subrule_analysis = subrule_cfg
+
+        # =====================================================================
+        # Simulation Metrics Tracker
+        # =====================================================================
+        enable_metrics = config.get('enable_sim_metrics', False) if config else False
+        if enable_metrics and gna_selection_mode.startswith("semantic"):
+            self.metrics_tracker = SimMetricsTracker(
+                mode=self.gna.rule_mode,
+            )
+            self.gna.metrics_tracker = self.metrics_tracker
+        else:
+            self.metrics_tracker = None
+            if enable_metrics:
+                logger.info("Sim metrics disabled: only supported for "
+                            f"semantic modes (current: {gna_selection_mode})")
 
         logger.info(f"City initialized with GNA: {'ENABLED' if enable_gna else 'DISABLED'}, Top-K: {gna_top_k}, Selection: {gna_selection_mode}")
         logger.info(f"Sub-rule analysis: {'ENABLED' if self.enable_subrule_analysis else 'DISABLED'}")
+        logger.info(f"Sim metrics: {'ENABLED' if self.metrics_tracker else 'DISABLED'}")
+        self._metrics_initialised = False
+        self._step_counter = 0
         # =====================================================================
         # vis color map
         self.color_map = COLOR_MAP
@@ -69,28 +106,35 @@ class City:
     # =========================================================================
     # [ADDED] GNA BROADCAST DISTRIBUTION METHOD
     # =========================================================================
-    def set_global_context_for_agents(self, broadcast):
+    def set_global_context_for_agents(self, per_agent_broadcasts):
         """
-        [ADDED] Distribute GNA broadcast to all agents.
-        
-        After GNA collects and filters global entity data, this method pushes
-        the broadcast to each agent. Agents then convert broadcast data into
-        GlobalPseudoAgent objects (in basic.py) for use in Z3 reasoning.
-        
+        Distribute per-agent GNA broadcasts to all agents.
+
+        Each agent receives its own personalized broadcast containing only the
+        vicinity entities that were selected for it (based on predicate
+        grounding).  Agents not present in per_agent_broadcasts receive None.
+
         Args:
-            broadcast: Dictionary containing filtered global entities and metadata.
-                       None if GNA is disabled or no entities to broadcast.
+            per_agent_broadcasts: Dict mapping agent_id (e.g. "Car_1") to
+                                  that agent's broadcast dict, or None if
+                                  GNA is disabled.
         """
-        if broadcast is None:
+        if per_agent_broadcasts is None:
             return
 
-        logger.debug(f"GNA: Distributing broadcast {broadcast['broadcast_id']} to {len(self.agents)} agents")
         for agent in self.agents:
             if agent is not None:
-                # Each agent's receive_global_context() (in basic.py) will process
-                # this broadcast and populate agent.global_entities for Z3.
-                agent.receive_global_context(broadcast)
-        logger.debug("GNA: Broadcast distribution completed")
+                agent_id = f"{agent.type}_{agent.id}"
+                agent_broadcast = per_agent_broadcasts.get(agent_id)
+                agent.receive_global_context(agent_broadcast)
+
+        agents_with_data = sum(
+            1 for b in per_agent_broadcasts.values()
+            if b and b.get('global_context')
+        )
+        logger.debug(f"GNA: Distributed per-agent broadcasts to "
+                     f"{sum(1 for a in self.agents if a is not None)} agents "
+                     f"({agents_with_data} with entity data)")
     # =========================================================================
 
     def update(self):
@@ -100,14 +144,25 @@ class City:
         current_obs["Agent_actions"] = []
 
         # =====================================================================
-        # [ADDED] GNA ORCHESTRATION - Global Entity Collection & Broadcasting
+        # Metrics: initialise trajectories for all agents on the first step
         # =====================================================================
-        # This is the main GNA entry point each timestep:
-        #   1. Collects pre-grounding data from all agents (positions, states, FOV)
-        #   2. Ranks entities by priority (based on rule relevance)
-        #   3. Filters to top-k entities
-        #   4. Broadcasts filtered context back to all agents
-        # Returns None if GNA is disabled.
+        if self.metrics_tracker and not self._metrics_initialised:
+            _lna_mode = self.gna.selection_mode.startswith("semantic_lna")
+            for agent in self.agents:
+                if agent is None:
+                    continue
+                if _lna_mode and agent.type != 'Car':
+                    continue
+                agent_id = f"{agent.type}_{agent.id}"
+                self.metrics_tracker.start_trajectory(agent_id)
+            self._metrics_initialised = True
+
+        if self.metrics_tracker:
+            self.metrics_tracker.set_step(self._step_counter)
+
+        # =====================================================================
+        # GNA ORCHESTRATION - Global Entity Collection & Broadcasting
+        # =====================================================================
         gna_broadcast = self.gna.orchestrate_global_reasoning(self)
         # =====================================================================
 
@@ -115,21 +170,14 @@ class City:
         current_world = self.city_grid.clone()
         
         # =====================================================================
-        # [MODIFIED] LOCAL PLANNER CALL - Now includes GNA and sub-rule analysis
+        # LOCAL PLANNER CALL - includes GNA and sub-rule analysis
         # =====================================================================
-        # The local planner (Z3) now receives:
-        #   - gna_broadcast: Global entities to include in reasoning (via agent.global_entities)
-        #   - enable_subrule_analysis: Whether to track sub-rule observability/satisfiability
-        # Returns:
-        #   - agent_action_dist: Action distributions for each agent
-        #   - subrule_analysis: Dictionary of sub-rule analysis results (if enabled)
         agent_action_dist, subrule_analysis = self.local_planner.plan(
             current_world, self.intersection_matrix, self.agents,
             self.layer_id2agent_list_id, use_multiprocessing=self.use_multi,
             gna_broadcast=gna_broadcast, enable_subrule_analysis=self.enable_subrule_analysis
         )
 
-        # [ADDED] Store sub-rule analysis in observations for downstream use
         if self.enable_subrule_analysis:
             current_obs["Subrule_Analysis"] = subrule_analysis
         # =====================================================================
@@ -140,17 +188,36 @@ class City:
             agent_name = "{}_{}".format(agent.type, agent.layer_id)
             empty_action = agent.action_dist.clone()
             local_action_dist = agent_action_dist[agent_name]
+
+            was_at_goal = agent.reach_goal
+
             # global trajectory-based action or sampling from local action distribution
             local_action, new_matrix[agent.layer_id] = agent.get_next_action(self.city_grid, local_action_dist)
             # save the current action in the action
             empty_action[local_action] = 1.0
             current_obs["Agent_actions"].append(empty_action)
+
+            # --- Metrics: trajectory lifecycle detection ---
+            if self.metrics_tracker:
+                _lna_mode = self.gna.selection_mode.startswith("semantic_lna")
+                if not (_lna_mode and agent.type != 'Car'):
+                    agent_id = f"{agent.type}_{agent.id}"
+                    now_at_goal = agent.reach_goal
+
+                    if not was_at_goal and now_at_goal:
+                        self.metrics_tracker.end_trajectory(
+                            agent_id, reached_goal=True,
+                        )
+                    elif was_at_goal and not now_at_goal:
+                        self.metrics_tracker.start_trajectory(agent_id)
+
             if agent.reach_goal:
                 continue
             next_layer = agent.move(local_action, new_matrix[agent.layer_id])
             new_matrix[agent.layer_id] = next_layer
         # Update city grid after all the agents make decisions
         self.city_grid[BASIC_LAYER:] = new_matrix[BASIC_LAYER:]
+        self._step_counter += 1
         return current_obs
 
     def add_building(self, building):

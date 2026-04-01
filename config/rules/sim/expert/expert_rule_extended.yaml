@@ -1,0 +1,338 @@
+Rules:
+  - Stop:
+      formula: |
+        Stop(entity) == Exists(
+          [dummyEntityA, dummyEntityB], 
+          Or(
+            And(
+              Not(IsAmbulance(entity)), 
+              Not(IsOld(entity)),
+              IsAtInter(entity), 
+              IsInInter(dummyEntityA)
+            ),
+            And(
+              Not(IsAmbulance(entity)), 
+              Not(IsOld(entity)),
+              IsAtInter(entity), 
+              IsAtInter(dummyEntityA), 
+              HigherPri(dummyEntityA, entity)
+            ),
+            And(
+              Not(IsAmbulance(entity)), 
+              Not(IsOld(entity)),
+              IsInInter(entity), 
+              IsInInter(dummyEntityA), 
+              IsAmbulance(dummyEntityA)
+            ),
+            And(
+              Not(IsAmbulance(entity)), 
+              Not(IsPolice(entity)), 
+              IsCar(entity),
+              Not(IsInInter(entity)),
+              Not(IsAtInter(entity)),
+              LeftOf(dummyEntityA, entity), 
+              IsClose(dummyEntityA, entity),
+              IsPolice(dummyEntityA)
+            ),
+            And(
+              IsBus(entity),
+              Not(IsInInter(entity)),
+              Not(IsAtInter(entity)),
+              RightOf(dummyEntityA, entity), 
+              NextTo(dummyEntityA, entity),
+              IsPedestrian(dummyEntityA)
+            ),
+            And(
+              IsAmbulance(entity), 
+              RightOf(dummyEntityA, entity), 
+              IsOld(dummyEntityA)
+            ),
+            And(
+              Not(IsAmbulance(entity)), 
+              Not(IsOld(entity)),
+              CollidingClose(entity, dummyEntityA)
+            ),
+            And(
+              IsCar(entity),
+              Not(IsInInter(entity)),
+              IsClose(entity, dummyEntityA),
+              IsPedestrian(dummyEntityA)
+            ),
+            And(
+              IsPedestrian(entity),
+              RightOf(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              IsPedestrian(entity),
+              LeftOf(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              IsCar(entity),
+              IsAtInter(entity),
+              NextTo(dummyEntityA, entity),
+              IsAmbulance(dummyEntityA)
+            ),
+            And(
+              Not(IsBus(entity)),
+              IsAtInter(entity),
+              NextTo(dummyEntityA, entity),
+              IsBus(dummyEntityA)
+            ),
+            And(
+              IsCar(entity),
+              Not(IsInInter(entity)),
+              NextTo(dummyEntityA, entity),
+              IsOld(dummyEntityA)
+            ),
+            And(
+              IsPedestrian(entity),
+              IsClose(dummyEntityA, entity),
+              IsAmbulance(dummyEntityA)
+            ),
+            And(
+              IsPedestrian(entity),
+              CollidingClose(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              IsCar(entity),
+              Not(IsPolice(entity)),
+              RightOf(dummyEntityA, entity),
+              NextTo(dummyEntityA, entity),
+              IsPolice(dummyEntityA)
+            ),
+            And(
+              IsCar(entity),
+              IsInInter(entity),
+              HigherPri(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity)
+            ),
+            And(
+              Not(IsOld(entity)),
+              Not(IsAmbulance(entity)),
+              IsClose(entity, dummyEntityA),
+              IsAmbulance(dummyEntityA),
+              IsAtInter(dummyEntityA)
+            ),
+            And(
+              IsCar(entity),
+              Not(IsReckless(entity)),
+              CollidingClose(entity, dummyEntityA),
+              IsPedestrian(dummyEntityA)
+            ),
+            And(
+              IsPedestrian(entity),
+              IsAtInter(entity),
+              IsInInter(dummyEntityA),
+              IsCar(dummyEntityA)
+            )
+          )
+        )
+      description: Extended stop rule with 20 subrules for discriminative metrics.
+  - Slow:
+      formula: |
+        Slow(entity) == Exists(
+          [dummyEntityA, dummyEntityB], 
+          Or(
+            And(
+              Not(Stop(entity)), 
+              IsTiro(entity), 
+              IsPedestrian(dummyEntityA), 
+              IsClose(entity, dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)), 
+              IsTiro(entity), 
+              IsInInter(entity),
+              IsAtInter(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsCar(entity),
+              IsClose(entity, dummyEntityA),
+              IsPedestrian(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsPedestrian(entity),
+              NextTo(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsCar(entity),
+              IsAtInter(entity),
+              IsClose(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsCar(entity),
+              IsClose(entity, dummyEntityA),
+              IsOld(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsPedestrian(entity),
+              IsAtInter(entity),
+              IsAtInter(dummyEntityA),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsCar(entity),
+              Not(IsAmbulance(entity)),
+              IsClose(dummyEntityA, entity),
+              IsAmbulance(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsPedestrian(entity),
+              RightOf(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity),
+              IsBus(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsCar(entity),
+              Not(IsAtInter(entity)),
+              IsClose(entity, dummyEntityA),
+              IsAtInter(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsPedestrian(entity),
+              IsClose(dummyEntityA, entity),
+              IsReckless(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsCar(entity),
+              LeftOf(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              Not(IsAmbulance(entity)),
+              IsInInter(entity),
+              IsClose(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsPedestrian(entity),
+              IsInInter(entity),
+              IsClose(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsCar(entity),
+              RightOf(dummyEntityA, entity),
+              NextTo(dummyEntityA, entity),
+              IsPedestrian(dummyEntityA)
+            )
+          )
+        )
+      description: Extended slow rule with 15 subrules (subrule 3 from original excluded).
+  - Fast:
+      formula: |
+        Fast(entity) == Exists(
+          [dummyEntityA, dummyEntityB], 
+          Or(
+            And(
+              Not(Stop(entity)), 
+              IsReckless(entity), 
+              IsAtInter(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)), 
+              IsBus(entity)
+            ),
+            And(
+              Not(Stop(entity)), 
+              IsPolice(entity),
+              IsReckless(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsPolice(entity),
+              IsClose(entity, dummyEntityA),
+              IsAmbulance(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsAmbulance(entity),
+              RightOf(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsReckless(entity),
+              LeftOf(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsCar(entity),
+              Not(IsAtInter(entity)),
+              Not(IsInInter(entity)),
+              HigherPri(entity, dummyEntityA),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsBus(entity),
+              Not(IsAtInter(entity)),
+              Not(IsInInter(entity)),
+              LeftOf(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsAmbulance(entity),
+              IsAtInter(entity),
+              IsClose(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsCar(entity),
+              Not(IsBus(entity)),
+              Not(IsAtInter(entity)),
+              RightOf(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity),
+              IsBus(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsPedestrian(entity),
+              Not(IsOld(entity)),
+              Not(IsAtInter(entity)),
+              IsClose(entity, dummyEntityA),
+              IsPedestrian(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsCar(entity),
+              Not(IsReckless(entity)),
+              Not(IsAtInter(entity)),
+              HigherPri(entity, dummyEntityA),
+              IsClose(entity, dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsPedestrian(entity),
+              Not(IsOld(entity)),
+              Not(IsInInter(entity)),
+              NextTo(dummyEntityA, entity),
+              IsPedestrian(dummyEntityA)
+            )
+          )
+        )
+      description: Extended fast rule with 13 subrules for discriminative metrics.

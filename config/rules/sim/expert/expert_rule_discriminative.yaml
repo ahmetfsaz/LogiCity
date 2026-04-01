@@ -1,0 +1,192 @@
+Rules:
+  - Stop:
+      formula: |
+        Stop(entity) == Exists(
+          [dummyEntityA, dummyEntityB], 
+          Or(
+            And(
+              CollidingClose(entity, dummyEntityA),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              CollidingClose(entity, dummyEntityA),
+              IsPedestrian(dummyEntityA)
+            ),
+            And(
+              IsClose(dummyEntityA, entity),
+              IsAmbulance(dummyEntityA)
+            ),
+            And(
+              NextTo(dummyEntityA, entity),
+              IsOld(dummyEntityA)
+            ),
+            And(
+              RightOf(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity),
+              IsPolice(dummyEntityA)
+            ),
+            And(
+              LeftOf(dummyEntityA, entity),
+              NextTo(dummyEntityA, entity),
+              IsPedestrian(dummyEntityA)
+            ),
+            And(
+              RightOf(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity),
+              IsReckless(dummyEntityA)
+            ),
+            And(
+              NextTo(dummyEntityA, entity),
+              IsBus(dummyEntityA)
+            ),
+            And(
+              LeftOf(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity),
+              IsTiro(dummyEntityA)
+            ),
+            And(
+              IsClose(dummyEntityA, entity),
+              IsYoung(dummyEntityA),
+              RightOf(dummyEntityA, entity)
+            )
+          )
+        )
+      description: >
+        Type-discriminative stop rules (10 subrules). Each subrule targets
+        a distinct entity type combined with spatial predicates. All are
+        non-ego-gated to maximise activation across agents.
+  - Slow:
+      formula: |
+        Slow(entity) == Exists(
+          [dummyEntityA, dummyEntityB], 
+          Or(
+            And(
+              Not(Stop(entity)),
+              IsClose(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsClose(entity, dummyEntityA),
+              IsPedestrian(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              RightOf(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity),
+              IsAmbulance(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              LeftOf(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity),
+              IsBus(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              NextTo(dummyEntityA, entity),
+              IsPolice(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsClose(dummyEntityA, entity),
+              IsOld(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsClose(dummyEntityA, entity),
+              IsReckless(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsClose(entity, dummyEntityA),
+              IsTiro(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              LeftOf(dummyEntityA, entity),
+              NextTo(dummyEntityA, entity),
+              IsYoung(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsClose(dummyEntityA, entity),
+              IsCar(dummyEntityA),
+              HigherPri(dummyEntityA, entity)
+            )
+          )
+        )
+      description: >
+        Type-discriminative slow rules (10 subrules). Each targets a
+        different entity type with spatial conditions. Non-ego-gated.
+  - Fast:
+      formula: |
+        Fast(entity) == Exists(
+          [dummyEntityA, dummyEntityB], 
+          Or(
+            And(
+              Not(Stop(entity)),
+              HigherPri(entity, dummyEntityA),
+              IsClose(entity, dummyEntityA),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              HigherPri(entity, dummyEntityA),
+              NextTo(dummyEntityA, entity)
+            ),
+            And(
+              Not(Stop(entity)),
+              RightOf(dummyEntityA, entity),
+              IsClose(entity, dummyEntityA),
+              IsTiro(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              LeftOf(dummyEntityA, entity),
+              IsClose(entity, dummyEntityA),
+              IsReckless(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsClose(entity, dummyEntityA),
+              IsBus(dummyEntityA),
+              HigherPri(entity, dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              RightOf(dummyEntityA, entity),
+              IsClose(entity, dummyEntityA),
+              IsPedestrian(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              Not(IsAtInter(entity)),
+              Not(IsInInter(entity)),
+              HigherPri(entity, dummyEntityA),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsClose(entity, dummyEntityA),
+              IsPolice(dummyEntityA),
+              HigherPri(entity, dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              LeftOf(dummyEntityA, entity),
+              IsClose(entity, dummyEntityA),
+              IsOld(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              Not(IsAtInter(entity)),
+              RightOf(dummyEntityA, entity),
+              IsClose(entity, dummyEntityA),
+              IsAmbulance(dummyEntityA)
+            )
+          )
+        )
+      description: >
+        Type-discriminative fast rules (10 subrules). Each targets a
+        different entity type. Minimal ego gates (2 positional).

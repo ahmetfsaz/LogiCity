@@ -92,7 +92,8 @@ CLOSE_RANGE_MIN = 12
 CLOSE_RANGE_MAX = 20
 # solver processer
 NUM_PROCESS = 4
-AGENT_FOV = 25 # better be larger than intersection width
+AGENT_FOV = 7 # better be larger than intersection width. 
+AGENT_VICINITY = 25  # outer radius for GNA near-vicinity zone (beyond FOV)
 
 # =============================================================================
 # [ADDED] Entity Occurrence Scores for SUB-RULE ANALYSIS (z3.py)

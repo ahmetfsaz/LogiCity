@@ -88,6 +88,7 @@ class CityLoader:
                 city = CityEnv(grid_size=(WORLD_SIZE, WORLD_SIZE), local_planner=rule_type, \
                             logic_engine_file=logic_engine_file, rl_agent=rl_agent, use_multi=use_multi, config=config)
         else:
+            config['rule_yaml_file'] = rule_yaml_file
             city = City(grid_size=(WORLD_SIZE, WORLD_SIZE), local_planner=rule_type, \
                         logic_engine_file=logic_engine_file, use_multi=use_multi, config=config)
         # =====================================================================

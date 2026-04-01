@@ -10,14 +10,29 @@ PURPOSE:
 KEY CONCEPTS:
     - Pre-grounding: Collecting agent state BEFORE Z3 logical reasoning happens
     - Global Context: Information about all agents in the environment
-    - Top-K Selection: Only the K most important entities are broadcast (assuming communication bw limits)
-    - Priority-based Selection: Entities are ranked by their importance in reasoning
+    - Top-K Selection: Only the K most important entities are broadcast (communication bw limit)
 
-WORKFLOW (called each timestep):
-    1. COLLECT: Gather data from all agents (position, type, concepts, intersection state)
-    2. RANK: Sort entities by priority (based on rule occurrence counts or goal oriented states)
-    3. FILTER: Select top-k most important entities
-    4. BROADCAST: Send filtered context to all agents for use in local reasoning
+SELECTION MODES (gna_selection_mode):
+    Semantic pipeline (per-agent personalised broadcasts):
+        - "semantic"            : Per-agent vicinity grounding + inductive-
+                                  probability-based optimal subset selection.
+        - "semantic_random"     : Per-agent vicinity grounding + random subset
+                                  selection (baseline for semantic pipeline).
+
+    LNA pipeline (two-way car ↔ LNA communication, multi-zone):
+        - "semantic_lna"        : Cars uplink top-k1 FOV entities (semantic) to
+                                  their LNA; LNA downlinks top-k2 (semantic).
+        - "semantic_lna_random" : Same structure but random selection for both
+                                  k1 and k2 (baseline for LNA pipeline).
+
+    Single-LNA pipeline (same as LNA but one global zone):
+        - "semantic_lna_single"        : Same pipeline as semantic_lna but all
+                                          cars share a single zone (no partitioning).
+        - "semantic_lna_random_single" : Random baseline for the single-zone pipeline.
+
+    Global pipeline (same broadcast to every agent):
+        - "ranking_priority"    : Global type-based priority ranking.
+        - "ranking_random"      : Random selection (baseline for global pipeline).
 
 INTEGRATION POINTS:
     - Called by City.update() or CityEnv.update_rl() each timestep
@@ -26,15 +41,28 @@ INTEGRATION POINTS:
 
 CONFIGURATION (in YAML config files):
     - enable_gna: true/false - Whether GNA is active
-    - gna_top_k: integer - How many entities to include in broadcast
-    - gna_selection_mode: "priority" or "random" - How to select entities, using priority ranking or random selection
+    - gna_top_k: integer - How many entities to include in broadcast (semantic/ranking modes)
+    - gna_top_k1: integer - (UNUSED) Uplink transmits all FOV entities; kept for config compat
+    - gna_top_k2: integer - Downlink budget LNA→car (LNA modes only)
+    - gna_selection_mode: "semantic" | "semantic_random" | "semantic_lna" | "semantic_lna_random" | "semantic_lna_single" | "semantic_lna_random_single" | "ranking_priority" | "ranking_random"
 """
 
 import time
+import random
 import logging
 import numpy as np
 import torch
 from ..core.config import *
+from ..planners.local.z3 import PesudoAgent
+from ..utils.pred_converter.z3 import (
+    IsCar, IsPed, IsAmb, IsBus, IsPolice, IsTiro, IsReckless, IsOld, IsYoung,
+    IsAtInter, IsInInter, IsClose, CollidingClose, LeftOf, RightOf, NextTo, HigherPri
+)
+from ..utils.semantic_selection import (
+    groundings_to_q_sentence, select_optimal_subset,
+    ALL_HYPOTHESES, EXTENDED_ALL_HYPOTHESES, SPATIAL_ALL_HYPOTHESES,
+    get_hypotheses_for_rule_file,
+)
 
 
 class GlobalNavigationAssistant:
@@ -55,40 +83,106 @@ class GlobalNavigationAssistant:
     # INITIALIZATION
     # ==================================================================================
     
-    def __init__(self, top_k=5, selection_mode="priority"):
+    VALID_SELECTION_MODES = (
+        "semantic", "semantic_random",
+        "semantic_lna", "semantic_lna_random",
+        "semantic_lna_single", "semantic_lna_random_single",
+        "ranking_priority", "ranking_random",
+    )
+
+    def __init__(self, top_k=5, selection_mode="semantic", rule_yaml_file="",
+                 top_k1=3, top_k2=3, agent_region=None):
         """
         Initialize the Global Navigation Assistant.
-        
-        Args:
-            top_k (int): Maximum number of entities to include in each broadcast.
-                         - Higher k = more global awareness but more communication cost
-                         - k=0 effectively disables GNA
-                         - Default: 5
-            
-            selection_mode (str): How to select which entities to broadcast.
-                         - "priority": Rank by entity importance in reasoning (ambulance > car, etc.)
-                         - "random": Random selection (for baseline comparison)
-                         - Default: "priority"
-        """
-        # History of all broadcasts (for debugging/analysis)
-        self.broadcast_history = []
-        
-        # Current global context (full, unfiltered) - kept for reference
-        self.current_global_context = {}
-        
-        # Whether GNA is active (can be toggled at runtime)
-        self.enabled = True
-        
-        # Counter for unique broadcast IDs
-        self.broadcast_id_counter = 0
-        
-        # Configuration parameters
-        self.top_k = top_k  # How many entities to broadcast
-        self.selection_mode = selection_mode  # "priority" or "random"
 
+        Args:
+            top_k (int): Maximum number of entities to include in each broadcast
+                         (used by semantic / semantic_random / ranking_* modes).
+
+            selection_mode (str): How to select which entities to broadcast.
+                Semantic pipeline (per-agent personalised broadcasts):
+                    - "semantic"            : vicinity grounding + inductive-
+                                              probability optimal subset.
+                    - "semantic_random"     : vicinity grounding + random subset.
+                LNA pipeline (two-way car ↔ LNA communication):
+                    - "semantic_lna"        : car uplink (semantic k1) →
+                                              LNA downlink (semantic k2).
+                    - "semantic_lna_random" : car uplink (random k1) →
+                                              LNA downlink (random k2).
+                Single-LNA pipeline (one global zone):
+                    - "semantic_lna_single"        : same as semantic_lna but
+                                                      all cars in one zone.
+                    - "semantic_lna_random_single" : random baseline for
+                                                      single-zone pipeline.
+                Global pipeline (same broadcast to every agent):
+                    - "ranking_priority"    : global type-based priority ranking.
+                    - "ranking_random"      : random selection.
+
+            rule_yaml_file (str): Path to the rule YAML file.
+
+            top_k1 (int): (UNUSED) Retained for config compatibility. Uplink
+                          now transmits all FOV entities unconditionally.
+
+            top_k2 (int): Downlink budget — entities each LNA transmits back
+                          to an ego car.  Only used by semantic_lna /
+                          semantic_lna_random.
+
+            agent_region (int | None): Active agent region size, forwarded to
+                          the LNA grid so only relevant LNAs are instantiated.
+        """
+        if selection_mode not in self.VALID_SELECTION_MODES:
+            raise ValueError(
+                f"Unknown GNA selection_mode: {selection_mode!r}. "
+                f"Must be one of {self.VALID_SELECTION_MODES}."
+            )
+
+        self.broadcast_history = []
+        self.current_global_context = {}
+        self.enabled = True
+        self.broadcast_id_counter = 0
+
+        self.top_k = top_k
+        self.top_k1 = top_k1
+        self.top_k2 = top_k2
+        self.selection_mode = selection_mode
+        self.rule_yaml_file = rule_yaml_file
+        self.use_extended_rules = 'extended' in rule_yaml_file
+        self.use_spatial_rules = 'spatial' in rule_yaml_file
+        self.use_discriminative_rules = 'discriminative' in rule_yaml_file
+        self.hypotheses = get_hypotheses_for_rule_file(rule_yaml_file)
+        self.metrics_tracker = None
+
+        # Lazy-init LNA grid only when needed
+        self.lna_grid = None
+        if selection_mode in ("semantic_lna", "semantic_lna_random"):
+            from .lna import LocalNavigationAssistant
+            self.lna_grid = LocalNavigationAssistant(
+                world_size=WORLD_SIZE,
+                agent_region=agent_region,
+            )
+
+        if self.use_discriminative_rules:
+            self.rule_mode = 'discriminative'
+            rule_label = 'discriminative (30)'
+        elif self.use_spatial_rules:
+            self.rule_mode = 'spatial'
+            rule_label = 'spatial (30)'
+        elif self.use_extended_rules:
+            self.rule_mode = 'extended'
+            rule_label = 'extended (48)'
+        else:
+            self.rule_mode = 'original'
+            rule_label = 'original (12)'
+
+        extra = ''
+        if selection_mode in ("semantic_lna", "semantic_lna_random",
+                               "semantic_lna_single", "semantic_lna_random_single"):
+            extra = f", k1=all (no uplink selection), k2={self.top_k2}"
         logging.info(f"Global Navigation Assistant (GNA) initialized - "
                      f"Status: {'ENABLED' if self.enabled else 'DISABLED'}, "
-                     f"Top-K: {self.top_k}, Selection Mode: {self.selection_mode}")
+                     f"Top-K: {self.top_k}{extra}, "
+                     f"Selection Mode: {self.selection_mode}, "
+                     f"Rule set: {rule_label}")
 
     # ==================================================================================
     # MAIN ORCHESTRATION - Called each timestep
@@ -97,56 +191,472 @@ class GlobalNavigationAssistant:
     def orchestrate_global_reasoning(self, city_env):
         """
         MAIN ENTRY POINT - Called each timestep by City.update().
-        
-        Orchestrates the complete GNA cycle:
-            Phase 1: Collect data from ALL agents
-            Phase 2: Filter to top-k and create broadcast
-            Phase 3: Distribute broadcast to all agents
-        
+
+        Dispatches to one of three pipelines based on ``self.selection_mode``:
+
+        **Semantic pipeline** (``"semantic"`` / ``"semantic_random"``):
+            1. Collect pre-grounding data from ALL agents.
+            2. For each ego agent, ground predicates on its vicinity
+               entities and select a subset (optimal or random).
+            3. Distribute *personalised* per-agent broadcasts.
+
+        **LNA pipeline** (``"semantic_lna*"`` modes):
+            1. Collect pre-grounding data from ALL agents.
+            2. Each car selects top-k1 FOV entities (uplink to its LNA).
+            3. Each LNA aggregates, filters, re-grounds, and selects
+               top-k2 entities per ego car (downlink).
+            4. Distribute personalised per-agent broadcasts.
+            Multi-zone (``semantic_lna`` / ``semantic_lna_random``) partitions
+            cars across LNA zones.  Single-zone (``semantic_lna_single`` /
+            ``semantic_lna_random_single``) puts all cars in one zone.
+
+        **Global pipeline** (``"ranking_priority"`` / ``"ranking_random"``):
+            1. Collect pre-grounding data from ALL agents.
+            2. Select the global top-k entities by type-priority ranking
+               or random sampling.
+            3. Broadcast the *same* set of entities to every agent.
+
         Args:
             city_env: The City or CityEnv instance containing:
                       - city_env.agents: List of all agent objects
                       - city_env.city_grid: Current world state tensor
                       - city_env.intersection_matrix: Intersection information
-        
+
         Returns:
-            dict: The broadcast object containing filtered global context,
+            dict: Combined broadcast (union of all per-agent selections),
                   or None if GNA is disabled.
-        
-        Side Effects:
-            - Calls city_env.set_global_context_for_agents() to distribute broadcast
-            - Updates self.broadcast_history
         """
-        # Skip if GNA is disabled
         if not self.enabled:
             logging.debug("GNA: Orchestration skipped - GNA is disabled")
             return None
 
-        logging.info("GNA: Starting orchestration cycle")
+        logging.info(f"GNA: Starting orchestration cycle "
+                     f"(mode={self.selection_mode})")
 
-        # -------------------------------------------------------------------------
+        # -----------------------------------------------------------------
         # PHASE 1: COLLECT - Gather pre-grounding data from ALL agents
-        # -------------------------------------------------------------------------
-        # This creates a comprehensive snapshot of the entire simulation state
+        # (shared by both pipelines)
+        # -----------------------------------------------------------------
         global_context = self.collect_pre_grounding_global(
-            city_env.agents,           # List of all agent objects
-            city_env.city_grid,        # World state tensor [layers, width, height]
-            city_env.intersection_matrix  # Intersection data [channels, width, height]
+            city_env.agents,
+            city_env.city_grid,
+            city_env.intersection_matrix,
         )
 
-        # -------------------------------------------------------------------------
-        # PHASE 2: BROADCAST - Filter to top-k and create broadcast message
-        # -------------------------------------------------------------------------
-        # This ranks entities, selects top-k, and packages into broadcast format
+        if self.selection_mode in ("semantic", "semantic_random"):
+            return self._run_semantic_pipeline(city_env, global_context)
+        elif self.selection_mode in ("semantic_lna", "semantic_lna_random",
+                                      "semantic_lna_single", "semantic_lna_random_single"):
+            return self._run_lna_pipeline(city_env, global_context)
+        else:
+            return self._run_global_pipeline(city_env, global_context)
+
+    # ------------------------------------------------------------------
+    # Semantic pipeline  ("semantic" / "semantic_random")
+    # ------------------------------------------------------------------
+
+    def _run_semantic_pipeline(self, city_env, global_context):
+        """Per-agent vicinity grounding + optimal or random subset selection."""
+        from ..utils.sim_metrics import ego_groundings_from_properties
+
+        layer_to_agent = self._build_layer_to_agent_map(city_env.agents)
+
+        per_agent_selections = {}
+        agent_layer_ids = set(layer_to_agent.keys())
+
+        for ego_id, ego_data in global_context.items():
+            selected, all_grounded = self.select_vicinity_entities_for_agent(
+                ego_id, ego_data, layer_to_agent,
+                city_env.intersection_matrix,
+            )
+            per_agent_selections[ego_id] = selected
+
+            # ----- Metrics evaluation -----
+            if self.metrics_tracker is not None:
+                ego_layer_id = ego_data['agent_properties']['layer_id']
+                ego_agent = layer_to_agent.get(ego_layer_id)
+                if ego_agent is None:
+                    continue
+
+                # Ground FOV entities (deduplicated by agent)
+                fov_groundings = []
+                fov_seen = set()
+                for fe in ego_data.get('fov_entities', []):
+                    fe_layer = fe['layer_id']
+                    fe_agent = layer_to_agent.get(fe_layer)
+                    if fe_agent is None or fe_agent.layer_id == ego_layer_id:
+                        continue
+                    fe_id = f"{fe_agent.type}_{fe_agent.id}"
+                    if fe_id in fov_seen:
+                        continue
+                    fov_seen.add(fe_id)
+                    fg = self.ground_predicates_for_vicinity_entity(
+                        ego_agent, fe_agent, city_env.intersection_matrix,
+                    )
+                    fov_groundings.append({'groundings': fg})
+
+                # Build entity groundings lists for evaluator
+                baseline_entities = fov_groundings + [
+                    {'groundings': e['groundings']} for e in all_grounded
+                ]
+                test_entities = fov_groundings + [
+                    {'groundings': e['groundings']} for e in selected
+                ]
+
+                # Resolve ego groundings
+                all_entities = baseline_entities or test_entities
+                if all_entities:
+                    ego_gr = all_entities[0]['groundings']['unary_ego']
+                else:
+                    ego_gr = ego_groundings_from_properties(
+                        ego_data['agent_properties']
+                    )
+
+                # Flatten to evaluator format
+                bl_flat = [e['groundings'] for e in baseline_entities]
+                te_flat = [e['groundings'] for e in test_entities]
+
+                evaluator = self.metrics_tracker.evaluator
+                baseline_eval = evaluator.evaluate(ego_gr, bl_flat)
+                test_eval = evaluator.evaluate(ego_gr, te_flat)
+
+                self.metrics_tracker.record_step(
+                    ego_id, baseline_eval, test_eval,
+                )
+
+
+        per_agent_broadcasts, combined_broadcast = \
+            self.broadcast_per_agent_context(global_context, per_agent_selections)
+
+        city_env.set_global_context_for_agents(per_agent_broadcasts)
+
+        n_agents = len(global_context)
+        if n_agents > 0:
+            fov_counts = [
+                len({e['layer_id'] for e in d.get('fov_entities', [])
+                     if e['layer_id'] in agent_layer_ids})
+                for d in global_context.values()
+            ]
+            vic_counts = [
+                len({e['layer_id'] for e in d.get('vicinity_entities', [])
+                     if e['layer_id'] in agent_layer_ids})
+                for d in global_context.values()
+            ]
+            logging.info(
+                f"GNA: Agents per ego — "
+                f"FOV: avg={sum(fov_counts)/n_agents:.1f}, "
+                f"min={min(fov_counts)}, max={max(fov_counts)} | "
+                f"Vicinity: avg={sum(vic_counts)/n_agents:.1f}, "
+                f"min={min(vic_counts)}, max={max(vic_counts)}"
+            )
+
+        logging.info("GNA: Semantic pipeline completed successfully")
+        return combined_broadcast
+
+    # ------------------------------------------------------------------
+    # LNA pipeline  (all "semantic_lna*" modes)
+    # ------------------------------------------------------------------
+
+    def _run_lna_pipeline(self, city_env, global_context):
+        """Two-way car ↔ LNA communication pipeline.
+
+        Phase 1 (Uplink):   Each car transmits ALL FOV entities + itself to
+                             the LNA.  No predicate grounding or selection is
+                             performed (Phase 2 re-grounds from the downlink
+                             ego's perspective).
+        Phase 2 (LNA):      Each LNA aggregates other cars' transmissions,
+                             filters, deduplicates, re-grounds from ego
+                             perspective, and selects k2 for each ego car.
+        Phase 3 (Downlink): Ego car receives FOV + k2 entities from LNA.
+
+        Multi-zone modes (semantic_lna / semantic_lna_random) partition cars
+        across an LNA grid.  Single-zone modes (semantic_lna_single /
+        semantic_lna_random_single) place all cars in one global zone.
+        """
+        from ..utils.sim_metrics import ego_groundings_from_properties
+
+        use_semantic = self.selection_mode in ("semantic_lna", "semantic_lna_single")
+        layer_to_agent = self._build_layer_to_agent_map(city_env.agents)
+        agent_layer_ids = set(layer_to_agent.keys())
+
+        # Identify car agents only (cars transmit and receive)
+        car_ids = []
+        car_positions = {}
+        for agent_id, agent_data in global_context.items():
+            if agent_data['agent_properties']['type'] == 'Car':
+                car_ids.append(agent_id)
+                pos = agent_data['agent_properties']['position']
+                car_positions[agent_id] = (int(pos[0]), int(pos[1]))
+
+        # =============================================================
+        # PHASE 1 — Uplink: each car transmits ALL FOV entities + itself
+        #   No predicate grounding or k1 selection — Phase 2 re-grounds
+        #   everything from the downlink ego's perspective.
+        # =============================================================
+        uplink = {}  # car_id → list of entity dicts (identity only)
+
+        for car_id in car_ids:
+            car_data = global_context[car_id]
+            car_layer_id = car_data['agent_properties']['layer_id']
+            car_agent = layer_to_agent.get(car_layer_id)
+            if car_agent is None:
+                continue
+
+            fov_entities_raw = car_data.get('fov_entities', [])
+            uplink_entries = []
+            seen_fov = set()
+            for fe in fov_entities_raw:
+                fe_layer = fe['layer_id']
+                fe_agent = layer_to_agent.get(fe_layer)
+                if fe_agent is None:
+                    continue
+                if fe_agent.layer_id == car_layer_id:
+                    continue
+                fe_id = f"{fe_agent.type}_{fe_agent.id}"
+                if fe_id in seen_fov:
+                    continue
+                seen_fov.add(fe_id)
+                uplink_entries.append({
+                    'entity_id': fe_id,
+                    'layer_id': fe_layer,
+                    'agent_ref': fe_agent,
+                    'position': fe['position'],
+                })
+
+            # Include the car itself in the uplink
+            car_pos = car_data['agent_properties']['position']
+            uplink_entries.append({
+                'entity_id': car_id,
+                'layer_id': car_layer_id,
+                'agent_ref': car_agent,
+                'position': car_pos,
+            })
+
+            uplink[car_id] = uplink_entries
+
+        # =============================================================
+        # PHASE 2 — LNA Processing
+        # =============================================================
+        if self.selection_mode in ("semantic_lna_single", "semantic_lna_random_single"):
+            lna_to_cars = {0: list(car_ids)}
+        else:
+            lna_to_cars = self.lna_grid.assign_cars_to_lnas(car_positions)
+
+        downlink = {}  # ego_car_id → list of re-grounded entity dicts
+
+        for lna_id, zone_car_ids in lna_to_cars.items():
+            if len(zone_car_ids) < 2:
+                for cid in zone_car_ids:
+                    downlink[cid] = []
+                continue
+
+            for ego_car_id in zone_car_ids:
+                ego_data = global_context[ego_car_id]
+                ego_layer_id = ego_data['agent_properties']['layer_id']
+                ego_agent = layer_to_agent.get(ego_layer_id)
+                if ego_agent is None:
+                    downlink[ego_car_id] = []
+                    continue
+
+                ego_pos = ego_data['agent_properties']['position']
+                ego_fov = ego_data['world_state']['fov_boundaries']
+
+                # Pool entities from OTHER cars in same LNA zone
+                pool = {}  # entity_id → entity dict (dedup)
+                for other_car_id in zone_car_ids:
+                    if other_car_id == ego_car_id:
+                        continue
+                    for ent in uplink.get(other_car_id, []):
+                        eid = ent['entity_id']
+                        if eid == ego_car_id:
+                            continue
+                        if eid not in pool:
+                            pool[eid] = ent
+
+                # Filter: not in ego's FOV
+                filtered = []
+                for eid, ent in pool.items():
+                    ex, ey = int(ent['position'][0]), int(ent['position'][1])
+                    if (ego_fov['x_start'] <= ex < ego_fov['x_end'] and
+                            ego_fov['y_start'] <= ey < ego_fov['y_end']):
+                        continue
+                    filtered.append(ent)
+
+                # Filter: in ego's vicinity
+                vic_x_start, vic_y_start, vic_x_end, vic_y_end = \
+                    self.get_vicinity_fov(
+                        ego_pos, ego_agent.last_move_dir if hasattr(ego_agent, 'last_move_dir') else None,
+                        city_env.city_grid.shape[1],
+                        city_env.city_grid.shape[2],
+                    )
+                vicinity_filtered = []
+                for ent in filtered:
+                    ex, ey = int(ent['position'][0]), int(ent['position'][1])
+                    if (vic_x_start <= ex < vic_x_end and
+                            vic_y_start <= ey < vic_y_end):
+                        vicinity_filtered.append(ent)
+
+                # Re-ground from ego car's perspective
+                regrounded = []
+                for ent in vicinity_filtered:
+                    ent_agent = ent.get('agent_ref')
+                    if ent_agent is None:
+                        ent_agent = layer_to_agent.get(ent.get('layer_id'))
+                    if ent_agent is None:
+                        continue
+                    new_gr = self.ground_predicates_for_vicinity_entity(
+                        ego_agent, ent_agent, city_env.intersection_matrix,
+                    )
+                    regrounded.append({
+                        'entity_id': ent['entity_id'],
+                        'layer_id': ent.get('layer_id'),
+                        'agent_ref': ent_agent,
+                        'position': ent['position'],
+                        'groundings': new_gr,
+                        'agent_properties': {
+                            'type': ent_agent.type,
+                            'position': ent['position'],
+                            'goal': (ent_agent.goal.tolist()
+                                     if hasattr(ent_agent.goal, 'tolist')
+                                     else ent_agent.goal),
+                            'current_action': ent_agent.last_move_dir,
+                            'priority': ent_agent.priority,
+                            'layer_id': ent.get('layer_id'),
+                            'concepts': (ent_agent.concepts
+                                         if hasattr(ent_agent, 'concepts') else {}),
+                            'is_at_intersection': new_gr['unary_entity']['IsAtInter'],
+                            'is_in_intersection': new_gr['unary_entity']['IsInInter'],
+                        },
+                    })
+
+                # Select k2 from re-grounded pool
+                if len(regrounded) <= self.top_k2:
+                    selected_down = list(regrounded)
+                elif use_semantic:
+                    for e in regrounded:
+                        e['q_sentence'] = groundings_to_q_sentence(e['groundings'])
+                    selected_down, _ = select_optimal_subset(
+                        regrounded, self.hypotheses, self.top_k2,
+                    )
+                else:
+                    rng = random.Random(time.time_ns())
+                    selected_down = rng.sample(regrounded, self.top_k2)
+
+                downlink[ego_car_id] = selected_down
+
+        # =============================================================
+        # PHASE 3 — Build per-agent broadcasts + metrics
+        # =============================================================
+        per_agent_selections = {}
+
+        for ego_id, ego_data in global_context.items():
+            ego_layer_id = ego_data['agent_properties']['layer_id']
+            ego_agent = layer_to_agent.get(ego_layer_id)
+
+            if ego_id in downlink:
+                per_agent_selections[ego_id] = downlink[ego_id]
+            else:
+                per_agent_selections[ego_id] = []
+
+            # ----- Metrics evaluation -----
+            # In LNA modes only cars participate; skip non-car agents so they
+            # don't drag down DSR/TSR with an unfair baseline-vs-empty comparison.
+            if self.metrics_tracker is not None and ego_agent is not None \
+                    and ego_data['agent_properties']['type'] == 'Car':
+                # FOV groundings (same as semantic pipeline)
+                fov_groundings = []
+                fov_seen = set()
+                for fe in ego_data.get('fov_entities', []):
+                    fe_layer = fe['layer_id']
+                    fe_agent = layer_to_agent.get(fe_layer)
+                    if fe_agent is None or fe_agent.layer_id == ego_layer_id:
+                        continue
+                    fe_id = f"{fe_agent.type}_{fe_agent.id}"
+                    if fe_id in fov_seen:
+                        continue
+                    fov_seen.add(fe_id)
+                    fg = self.ground_predicates_for_vicinity_entity(
+                        ego_agent, fe_agent, city_env.intersection_matrix,
+                    )
+                    fov_groundings.append({'groundings': fg})
+
+                # ALL vicinity entities for baseline
+                all_vicinity_grounded = []
+                vic_entities = ego_data.get('vicinity_entities', [])
+                vic_seen = set()
+                for ve in vic_entities:
+                    ve_layer = ve['layer_id']
+                    ve_agent = layer_to_agent.get(ve_layer)
+                    if ve_agent is None or ve_agent.layer_id == ego_layer_id:
+                        continue
+                    ve_id = f"{ve_agent.type}_{ve_agent.id}"
+                    if ve_id in vic_seen:
+                        continue
+                    vic_seen.add(ve_id)
+                    vg = self.ground_predicates_for_vicinity_entity(
+                        ego_agent, ve_agent, city_env.intersection_matrix,
+                    )
+                    all_vicinity_grounded.append({'groundings': vg})
+
+                baseline_entities = fov_groundings + all_vicinity_grounded
+                test_entities = fov_groundings + [
+                    {'groundings': e['groundings']}
+                    for e in per_agent_selections.get(ego_id, [])
+                ]
+
+                all_entities = baseline_entities or test_entities
+                if all_entities:
+                    ego_gr = all_entities[0]['groundings']['unary_ego']
+                else:
+                    ego_gr = ego_groundings_from_properties(
+                        ego_data['agent_properties']
+                    )
+
+                bl_flat = [e['groundings'] for e in baseline_entities]
+                te_flat = [e['groundings'] for e in test_entities]
+
+                evaluator = self.metrics_tracker.evaluator
+                baseline_eval = evaluator.evaluate(ego_gr, bl_flat)
+                test_eval = evaluator.evaluate(ego_gr, te_flat)
+
+                self.metrics_tracker.record_step(
+                    ego_id, baseline_eval, test_eval,
+                )
+
+        per_agent_broadcasts, combined_broadcast = \
+            self.broadcast_per_agent_context(global_context, per_agent_selections)
+
+        city_env.set_global_context_for_agents(per_agent_broadcasts)
+
+        n_agents = len(global_context)
+        n_cars = len(car_ids)
+        n_with_downlink = sum(1 for d in downlink.values() if d)
+        logging.info(
+            f"GNA: LNA pipeline completed — "
+            f"{n_cars} cars, {n_with_downlink} received downlink, "
+            f"mode={self.selection_mode}, k1=all, k2={self.top_k2}"
+        )
+
+        return combined_broadcast
+
+    # ------------------------------------------------------------------
+    # Global pipeline  ("ranking_priority" / "ranking_random")
+    # ------------------------------------------------------------------
+
+    def _run_global_pipeline(self, city_env, global_context):
+        """Global type-priority / random selection — same broadcast to all."""
         broadcast = self.broadcast_global_context(global_context)
 
-        # -------------------------------------------------------------------------
-        # PHASE 3: DISTRIBUTE - Send broadcast to all agents
-        # -------------------------------------------------------------------------
-        # Each agent will receive this via receive_global_context() in basic.py
-        city_env.set_global_context_for_agents(broadcast)
+        per_agent_broadcasts = {
+            f"{agent.type}_{agent.id}": broadcast
+            for agent in city_env.agents
+            if agent is not None
+        }
 
-        logging.info("GNA: Orchestration cycle completed successfully")
+        city_env.set_global_context_for_agents(per_agent_broadcasts)
+
+        logging.info("GNA: Global pipeline completed successfully "
+                     f"(mode={self.selection_mode})")
         return broadcast
 
     # ==================================================================================
@@ -220,6 +730,11 @@ class GlobalNavigationAssistant:
             # Get list of entities within this agent's FOV
             # -----------------------------------------------------------------
             fov_entities = self.get_agent_fov_entities(agent, city_grid)
+
+            # -----------------------------------------------------------------
+            # Get list of entities in near-vicinity zone (beyond FOV, within AGENT_VICINITY)
+            # -----------------------------------------------------------------
+            vicinity_entities = self.get_agent_vicinity_entities(agent, city_grid)
 
             # -----------------------------------------------------------------
             # Extract agent's concept attributes (ambulance, police, old, etc.)
@@ -308,6 +823,7 @@ class GlobalNavigationAssistant:
             global_context[agent_id] = {
                 'world_state': agent_world_view,
                 'fov_entities': fov_entities,
+                'vicinity_entities': vicinity_entities,
                 'agent_properties': agent_properties,
                 'environmental_context': environmental_context,
                 'collection_timestamp': time.time()
@@ -544,11 +1060,6 @@ class GlobalNavigationAssistant:
             list: List of (agent_id, priority_score) tuples.
                   Priority is set to 0 for all (not meaningful in random mode).
         """
-        import random
-        import time
-
-        # Create separate RNG to avoid being affected by global seed
-        # time.time_ns() ensures different selection each call
         rng = random.Random(time.time_ns())
 
         all_agent_ids = list(global_context.keys())
@@ -564,10 +1075,10 @@ class GlobalNavigationAssistant:
     def filter_top_k_entities(self, global_context):
         """
         Filter global context to include only the top-k most important entities.
-        
-        Supports two selection modes:
-            - "priority": Use get_entity_priority() ranking
-            - "random": Random selection (for experiments)
+
+        Supports two global-pipeline modes:
+            - "ranking_priority": Use get_entity_priority() ranking
+            - "ranking_random":   Random selection (for experiments)
         
         Args:
             global_context: Full global context dict with all agents
@@ -579,33 +1090,26 @@ class GlobalNavigationAssistant:
         if self.top_k <= 0:
             return {}
 
-        # Select entities based on mode
-        if self.selection_mode == "priority":
-            # Priority-based selection (default)
+        if self.selection_mode == "ranking_priority":
             ranked_entities = self.rank_entities_by_priority(global_context)
             selected_entities = ranked_entities[:self.top_k]
-        elif self.selection_mode == "random":
-            # Random selection (for baseline experiments)
+        elif self.selection_mode == "ranking_random":
             selected_entities = self.select_random_entities(global_context)
         else:
-            raise ValueError(f"Unknown GNA selection mode: {self.selection_mode}. "
-                             f"Must be 'priority' or 'random'")
+            raise ValueError(f"Unknown GNA global-pipeline mode: {self.selection_mode}. "
+                             f"Must be 'ranking_priority' or 'ranking_random'")
 
-        # Extract selected agent IDs
         top_k_ids = {agent_id for agent_id, _ in selected_entities}
 
-        # Filter the global context to only include selected entities
         filtered_context = {
             agent_id: global_context[agent_id]
             for agent_id in top_k_ids
             if agent_id in global_context
         }
 
-        selection_method = ("priority-based" if self.selection_mode == "priority" 
-                            else "random")
-        logging.debug(f"GNA: Filtered to top-{self.top_k} entities ({selection_method}) "
-                      f"from {len(global_context)} total. "
-                      f"Selected: {list(filtered_context.keys())}")
+        logging.debug(f"GNA: Filtered to top-{self.top_k} entities "
+                      f"({self.selection_mode}) from {len(global_context)} "
+                      f"total. Selected: {list(filtered_context.keys())}")
         
         return filtered_context
 
@@ -662,14 +1166,11 @@ class GlobalNavigationAssistant:
         self.broadcast_history.append(broadcast)
         self.broadcast_id_counter += 1
 
-        # Log broadcast summary
-        selection_method = ("priority-based" if self.selection_mode == "priority" 
-                            else "random")
         logging.info(f"GNA: Broadcasting filtered global context - "
                      f"ID: {broadcast['broadcast_id']}, "
                      f"Total agents: {len(global_context)}, "
                      f"Filtered: {len(filtered_context)} "
-                     f"(top-{self.top_k}, {selection_method})")
+                     f"(top-{self.top_k}, {self.selection_mode})")
 
         # Log detailed composition if we have entities
         if filtered_context:
@@ -697,6 +1198,349 @@ class GlobalNavigationAssistant:
             logging.info("GNA: No entities selected for broadcast (k=0 or no agents)")
 
         return broadcast
+
+    # ==================================================================================
+    # PHASE 3: PREDICATE-BASED PER-AGENT SELECTION
+    # ==================================================================================
+    # New pipeline: ground predicates for each ego agent's vicinity entities,
+    # select top-k using those groundings, and create per-agent broadcasts.
+    # ==================================================================================
+
+    def _build_layer_to_agent_map(self, all_agents):
+        """Build a lookup dict from grid layer_id to agent object."""
+        mapping = {}
+        for agent in all_agents:
+            if agent is not None:
+                mapping[agent.layer_id] = agent
+        return mapping
+
+    def _compute_intersection_state(self, agent_type, position, intersection_matrix):
+        """
+        Compute is_at_intersection and is_in_intersection for an entity
+        at a given position, using the intersection_matrix directly.
+        """
+        pos_x, pos_y = int(position[0]), int(position[1])
+        is_at = False
+        is_in = False
+
+        if intersection_matrix is None:
+            return is_at, is_in
+
+        if agent_type == "Car" or "car" in agent_type.lower():
+            if (intersection_matrix.shape[0] > 0 and
+                    pos_x < intersection_matrix.shape[1] and
+                    pos_y < intersection_matrix.shape[2]):
+                is_at = bool(intersection_matrix[0, pos_x, pos_y].item())
+            if (intersection_matrix.shape[0] > 2 and
+                    pos_x < intersection_matrix.shape[1] and
+                    pos_y < intersection_matrix.shape[2]):
+                is_in = bool(intersection_matrix[2, pos_x, pos_y].item())
+        else:
+            if (intersection_matrix.shape[0] > 1 and
+                    pos_x < intersection_matrix.shape[1] and
+                    pos_y < intersection_matrix.shape[2]):
+                is_at = bool(intersection_matrix[1, pos_x, pos_y].item())
+            if (intersection_matrix.shape[0] > 2 and
+                    pos_x < intersection_matrix.shape[1] and
+                    pos_y < intersection_matrix.shape[2]):
+                is_in = bool(intersection_matrix[2, pos_x, pos_y].item())
+
+        return is_at, is_in
+
+    def ground_predicates_for_vicinity_entity(self, ego_agent, entity_agent, intersection_matrix):
+        """
+        Ground all predicates for a vicinity entity relative to the ego agent.
+
+        Creates PesudoAgent objects for both ego and entity, then evaluates
+        every predicate using the same grounding functions Z3 uses (from
+        pred_converter/z3.py).  The world_matrix argument is None because all
+        spatial lookups go through PesudoAgent.world_pos when in_fov_matrix=False.
+
+        Returns:
+            dict with keys 'unary_entity', 'unary_ego', 'binary_ego_entity',
+            'binary_entity_ego' -- each mapping predicate names to bool.
+        """
+        ego_pos = ego_agent.pos.tolist() if hasattr(ego_agent.pos, 'tolist') else list(ego_agent.pos)
+        entity_pos = entity_agent.pos.tolist() if hasattr(entity_agent.pos, 'tolist') else list(entity_agent.pos)
+
+        ego_is_at, ego_is_in = self._compute_intersection_state(
+            ego_agent.type, ego_pos, intersection_matrix)
+        entity_is_at, entity_is_in = self._compute_intersection_state(
+            entity_agent.type, entity_pos, intersection_matrix)
+
+        ego_pseudo = PesudoAgent(
+            type=ego_agent.type,
+            layer_id=ego_agent.layer_id,
+            concepts=ego_agent.concepts if hasattr(ego_agent, 'concepts') else {},
+            moving_direction=ego_agent.last_move_dir if hasattr(ego_agent, 'last_move_dir') else None,
+            world_pos=ego_pos,
+            in_fov_matrix=False,
+            is_at_intersection=ego_is_at,
+            is_in_intersection=ego_is_in,
+        )
+
+        entity_pseudo = PesudoAgent(
+            type=entity_agent.type,
+            layer_id=entity_agent.layer_id,
+            concepts=entity_agent.concepts if hasattr(entity_agent, 'concepts') else {},
+            moving_direction=entity_agent.last_move_dir if hasattr(entity_agent, 'last_move_dir') else None,
+            world_pos=entity_pos,
+            in_fov_matrix=False,
+            is_at_intersection=entity_is_at,
+            is_in_intersection=entity_is_in,
+        )
+
+        agents_dict = {
+            str(ego_agent.layer_id): ego_pseudo,
+            str(entity_agent.layer_id): entity_pseudo,
+        }
+
+        ego_name = f"Entity_{ego_agent.type}_{ego_agent.layer_id}"
+        entity_name = f"Entity_{entity_agent.type}_{entity_agent.layer_id}"
+
+        wm = None  # world_matrix unused when in_fov_matrix=False
+        im = intersection_matrix
+
+        unary_entity = {
+            'IsCar':        bool(IsCar(wm, im, agents_dict, entity_name)),
+            'IsPedestrian': bool(IsPed(wm, im, agents_dict, entity_name)),
+            'IsAmbulance':  bool(IsAmb(wm, im, agents_dict, entity_name)),
+            'IsBus':        bool(IsBus(wm, im, agents_dict, entity_name)),
+            'IsPolice':     bool(IsPolice(wm, im, agents_dict, entity_name)),
+            'IsTiro':       bool(IsTiro(wm, im, agents_dict, entity_name)),
+            'IsReckless':   bool(IsReckless(wm, im, agents_dict, entity_name)),
+            'IsOld':        bool(IsOld(wm, im, agents_dict, entity_name)),
+            'IsYoung':      bool(IsYoung(wm, im, agents_dict, entity_name)),
+            'IsAtInter':    bool(IsAtInter(wm, im, agents_dict, entity_name)),
+            'IsInInter':    bool(IsInInter(wm, im, agents_dict, entity_name)),
+        }
+
+        unary_ego = {
+            'IsCar':        bool(IsCar(wm, im, agents_dict, ego_name)),
+            'IsPedestrian': bool(IsPed(wm, im, agents_dict, ego_name)),
+            'IsAmbulance':  bool(IsAmb(wm, im, agents_dict, ego_name)),
+            'IsBus':        bool(IsBus(wm, im, agents_dict, ego_name)),
+            'IsPolice':     bool(IsPolice(wm, im, agents_dict, ego_name)),
+            'IsTiro':       bool(IsTiro(wm, im, agents_dict, ego_name)),
+            'IsReckless':   bool(IsReckless(wm, im, agents_dict, ego_name)),
+            'IsOld':        bool(IsOld(wm, im, agents_dict, ego_name)),
+            'IsYoung':      bool(IsYoung(wm, im, agents_dict, ego_name)),
+            'IsAtInter':    bool(IsAtInter(wm, im, agents_dict, ego_name)),
+            'IsInInter':    bool(IsInInter(wm, im, agents_dict, ego_name)),
+        }
+
+        binary_ego_entity = {
+            'IsClose':        bool(IsClose(wm, im, agents_dict, ego_name, entity_name)),
+            'CollidingClose': bool(CollidingClose(wm, im, agents_dict, ego_name, entity_name)),
+            'LeftOf':         bool(LeftOf(wm, im, agents_dict, ego_name, entity_name)),
+            'RightOf':        bool(RightOf(wm, im, agents_dict, ego_name, entity_name)),
+            'NextTo':         bool(NextTo(wm, im, agents_dict, ego_name, entity_name)),
+            'HigherPri':      bool(HigherPri(wm, im, agents_dict, ego_name, entity_name)),
+        }
+
+        binary_entity_ego = {
+            'IsClose':        bool(IsClose(wm, im, agents_dict, entity_name, ego_name)),
+            'CollidingClose': bool(CollidingClose(wm, im, agents_dict, entity_name, ego_name)),
+            'LeftOf':         bool(LeftOf(wm, im, agents_dict, entity_name, ego_name)),
+            'RightOf':        bool(RightOf(wm, im, agents_dict, entity_name, ego_name)),
+            'NextTo':         bool(NextTo(wm, im, agents_dict, entity_name, ego_name)),
+            'HigherPri':      bool(HigherPri(wm, im, agents_dict, entity_name, ego_name)),
+        }
+
+        return {
+            'unary_entity': unary_entity,
+            'unary_ego': unary_ego,
+            'binary_ego_entity': binary_ego_entity,
+            'binary_entity_ego': binary_entity_ego,
+        }
+
+    def select_vicinity_entities_for_agent(self, ego_id, ego_data, layer_to_agent,
+                                           intersection_matrix):
+        """
+        Ground predicates for the ego agent's vicinity entities and select top-k.
+
+        For each vicinity entity, grounds all predicates relative to the ego
+        agent, converts groundings to a Q-sentence, and uses
+        ``select_optimal_subset`` (inductive-probability-based semantic
+        selection) to choose the k entities that minimize the communication
+        objective.
+
+        Args:
+            ego_id: Agent identifier string, e.g. "Car_1".
+            ego_data: This agent's entry from global_context.
+            layer_to_agent: Dict mapping layer_id -> agent object.
+            intersection_matrix: Intersection tensor [3, W, H].
+
+        Returns:
+            tuple of (selected, grounded_entities):
+            - selected: list of dicts chosen for broadcast
+            - grounded_entities: full list of all grounded vicinity entities
+              (before selection), for metrics baseline evaluation.
+        """
+        vicinity_entities = ego_data.get('vicinity_entities', [])
+        if not vicinity_entities:
+            return [], []
+
+        ego_layer_id = ego_data['agent_properties']['layer_id']
+        ego_agent = layer_to_agent.get(ego_layer_id)
+        if ego_agent is None:
+            logging.warning(f"GNA: Could not find ego agent for {ego_id} "
+                            f"(layer_id={ego_layer_id})")
+            return [], []
+
+        grounded_entities = []
+        for ve in vicinity_entities:
+            entity_layer_id = ve['layer_id']
+            entity_agent = layer_to_agent.get(entity_layer_id)
+            if entity_agent is None:
+                continue
+            if entity_agent.layer_id == ego_agent.layer_id:
+                continue
+
+            groundings = self.ground_predicates_for_vicinity_entity(
+                ego_agent, entity_agent, intersection_matrix
+            )
+
+            entity_id = f"{entity_agent.type}_{entity_agent.id}"
+            grounded_entities.append({
+                'entity_id': entity_id,
+                'agent_properties': {
+                    'type': entity_agent.type,
+                    'position': ve['position'],
+                    'goal': (entity_agent.goal.tolist()
+                             if hasattr(entity_agent.goal, 'tolist')
+                             else entity_agent.goal),
+                    'current_action': entity_agent.last_move_dir,
+                    'priority': entity_agent.priority,
+                    'layer_id': entity_layer_id,
+                    'concepts': (entity_agent.concepts
+                                 if hasattr(entity_agent, 'concepts') else {}),
+                    'is_at_intersection': groundings['unary_entity']['IsAtInter'],
+                    'is_in_intersection': groundings['unary_entity']['IsInInter'],
+                },
+                'groundings': groundings,
+            })
+
+        seen_ids = set()
+        unique_grounded = []
+        for ge in grounded_entities:
+            eid = ge['entity_id']
+            if eid not in seen_ids:
+                seen_ids.add(eid)
+                unique_grounded.append(ge)
+        grounded_entities = unique_grounded
+
+        if self.selection_mode == "semantic":
+            for entity in grounded_entities:
+                entity['q_sentence'] = groundings_to_q_sentence(
+                    entity['groundings']
+                )
+
+            selected, score = select_optimal_subset(
+                grounded_entities, self.hypotheses, self.top_k,
+            )
+
+            logging.debug(f"GNA: Agent {ego_id} - "
+                          f"{len(vicinity_entities)} vicinity entities, "
+                          f"{len(grounded_entities)} grounded, "
+                          f"{len(selected)} selected (obj_score={score:.6e})")
+        else:
+            # semantic_random: random subset from grounded vicinity entities
+            if len(grounded_entities) <= self.top_k:
+                selected = list(grounded_entities)
+            else:
+                rng = random.Random(time.time_ns())
+                selected = rng.sample(grounded_entities, self.top_k)
+
+            logging.debug(f"GNA: Agent {ego_id} - "
+                          f"{len(vicinity_entities)} vicinity entities, "
+                          f"{len(grounded_entities)} grounded, "
+                          f"{len(selected)} selected (semantic_random)")
+
+        return selected, grounded_entities
+
+    def broadcast_per_agent_context(self, global_context, per_agent_selections):
+        """
+        Create per-agent broadcast messages and a combined broadcast for Z3.
+
+        Args:
+            global_context: Full global context from collect_pre_grounding_global().
+            per_agent_selections: Dict mapping ego_id -> list of selected entity dicts.
+
+        Returns:
+            (per_agent_broadcasts, combined_broadcast)
+            per_agent_broadcasts: {ego_id: broadcast_dict} for distribution.
+            combined_broadcast: Single broadcast (union of all selections) for Z3
+                                backward-compatibility.
+        """
+        broadcast_id = f"gna_broadcast_{self.broadcast_id_counter}"
+        timestamp = time.time()
+
+        per_agent_broadcasts = {}
+        all_selected = {}
+
+        for ego_id, selected_entities in per_agent_selections.items():
+            selected_context = {}
+            for entity in selected_entities:
+                eid = entity['entity_id']
+                entry = {
+                    'agent_properties': entity['agent_properties'],
+                    'groundings': entity['groundings'],
+                    'fov_entities': [],
+                    'vicinity_entities': [],
+                    'world_state': {},
+                    'environmental_context': {
+                        'nearby_intersections': [],
+                        'traffic_conditions': {
+                            'density': 0,
+                            'nearby_agents': [],
+                            'potential_conflicts': [],
+                        },
+                        'movable_region': None,
+                    },
+                    'collection_timestamp': timestamp,
+                }
+                selected_context[eid] = entry
+                if eid not in all_selected:
+                    all_selected[eid] = entry
+
+            per_agent_broadcasts[ego_id] = {
+                'broadcast_id': broadcast_id,
+                'timestamp': timestamp,
+                'global_context': selected_context,
+                'metadata': {
+                    'total_agents': len(global_context),
+                    'filtered_agents': len(selected_context),
+                    'top_k': self.top_k,
+                    'collection_time': timestamp,
+                    'broadcast_size': len(selected_context),
+                },
+            }
+
+        combined_broadcast = {
+            'broadcast_id': broadcast_id,
+            'timestamp': timestamp,
+            'global_context': all_selected,
+            'metadata': {
+                'total_agents': len(global_context),
+                'filtered_agents': len(all_selected),
+                'top_k': self.top_k,
+                'collection_time': timestamp,
+                'broadcast_size': len(all_selected),
+            },
+        }
+
+        self.current_global_context = global_context
+        self.broadcast_history.append(combined_broadcast)
+        self.broadcast_id_counter += 1
+
+        agents_with_data = sum(1 for s in per_agent_selections.values() if s)
+        logging.info(f"GNA: Per-agent broadcasts created - ID: {broadcast_id}, "
+                     f"Total agents: {len(global_context)}, "
+                     f"Agents with selections: {agents_with_data}, "
+                     f"Unique entities selected: {len(all_selected)}")
+
+        return per_agent_broadcasts, combined_broadcast
 
     # ==================================================================================
     # HELPER METHODS - FOV and World View Extraction
@@ -790,6 +1634,46 @@ class GlobalNavigationAssistant:
                     })
 
         return fov_entities
+
+    def get_agent_vicinity_entities(self, agent, city_grid):
+        """
+        Get entities in the near-vicinity zone: beyond AGENT_FOV but within AGENT_VICINITY.
+        Returns entities in the ring between the two radii, excluding those already in the FOV.
+        """
+        vicinity_entities = []
+
+        fov_x_start, fov_y_start, fov_x_end, fov_y_end = self.get_fov(
+            agent.pos, agent.last_move_dir,
+            city_grid.shape[1], city_grid.shape[2]
+        )
+
+        vic_x_start, vic_y_start, vic_x_end, vic_y_end = self.get_vicinity_fov(
+            agent.pos, agent.last_move_dir,
+            city_grid.shape[1], city_grid.shape[2]
+        )
+
+        for layer_idx in range(city_grid.shape[0]):
+            layer = city_grid[layer_idx, vic_x_start:vic_x_end, vic_y_start:vic_y_end]
+
+            nonzero_pos = torch.nonzero(layer, as_tuple=False)
+            for pos in nonzero_pos:
+                actual_x = pos[0] + vic_x_start
+                actual_y = pos[1] + vic_y_start
+
+                if (fov_x_start <= actual_x < fov_x_end and
+                        fov_y_start <= actual_y < fov_y_end):
+                    continue
+
+                entity_value = layer[pos[0], pos[1]].item()
+                if entity_value != 0:
+                    vicinity_entities.append({
+                        'layer_id': layer_idx,
+                        'position': [actual_x, actual_y],
+                        'entity_type': LABEL_MAP.get(entity_value, 'unknown'),
+                        'entity_value': entity_value
+                    })
+
+        return vicinity_entities
 
     # ==================================================================================
     # HELPER METHODS - Environmental Context Extraction
@@ -944,6 +1828,44 @@ class GlobalNavigationAssistant:
             y_start = max(position[1] - AGENT_FOV, 0)
             x_end = min(position[0] + AGENT_FOV + 1, width)
             y_end = min(position[1] + AGENT_FOV + 1, height)
+
+        return x_start, y_start, x_end, y_end
+
+    def get_vicinity_fov(self, position, direction, width, height):
+        """
+        Calculate near-vicinity boundaries using AGENT_VICINITY radius.
+        Same directional logic as get_fov() but with the larger radius.
+        """
+        if direction == None:
+            x_start = max(position[0] - AGENT_VICINITY, 0)
+            y_start = max(position[1] - AGENT_VICINITY, 0)
+            x_end = min(position[0] + AGENT_VICINITY + 1, width)
+            y_end = min(position[1] + AGENT_VICINITY + 1, height)
+        elif direction == "Left":
+            x_start = max(position[0] - AGENT_VICINITY, 0)
+            y_start = max(position[1] - AGENT_VICINITY, 0)
+            x_end = min(position[0] + AGENT_VICINITY + 1, width)
+            y_end = min(position[1] + 2, height)
+        elif direction == "Right":
+            x_start = max(position[0] - AGENT_VICINITY, 0)
+            y_start = max(position[1] - 2, 0)
+            x_end = min(position[0] + AGENT_VICINITY + 1, width)
+            y_end = min(position[1] + AGENT_VICINITY + 1, height)
+        elif direction == "Up":
+            x_start = max(position[0] - AGENT_VICINITY, 0)
+            y_start = max(position[1] - AGENT_VICINITY, 0)
+            x_end = min(position[0] + 2, width)
+            y_end = min(position[1] + AGENT_VICINITY + 1, height)
+        elif direction == "Down":
+            x_start = max(position[0] - 2, 0)
+            y_start = max(position[1] - AGENT_VICINITY, 0)
+            x_end = min(position[0] + AGENT_VICINITY + 1, width)
+            y_end = min(position[1] + AGENT_VICINITY + 1, height)
+        else:
+            x_start = max(position[0] - AGENT_VICINITY, 0)
+            y_start = max(position[1] - AGENT_VICINITY, 0)
+            x_end = min(position[0] + AGENT_VICINITY + 1, width)
+            y_end = min(position[1] + AGENT_VICINITY + 1, height)
 
         return x_start, y_start, x_end, y_end
 

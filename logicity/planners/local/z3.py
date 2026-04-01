@@ -933,6 +933,10 @@ class Z3Planner(LocalPlanner):
             # First, add local agents (existing logic)
             # [MODIFIED] Now computes and stores WORLD coordinates for all local entities
             for layer_id in range(partial_world_squeezed.shape[0]):
+                other_agent_layer_id = int(non_zero_layer_indices[layer_id])
+                if other_agent_layer_id not in layerid2listid:
+                    continue
+
                 layer = partial_world_squeezed[layer_id]
                 layer_nonzero_int = torch.logical_and(layer != 0, layer == layer.to(torch.int64))
                 if layer_nonzero_int.nonzero().shape[0] > 1:
@@ -950,8 +954,6 @@ class Z3Planner(LocalPlanner):
                 
                 non_zero_values = int(layer[local_x, local_y])
                 agent_type = LABEL_MAP[non_zero_values]
-                # find this agent
-                other_agent_layer_id = int(non_zero_layer_indices[layer_id])
                 other_agent = agents[layerid2listid[other_agent_layer_id]]
                 assert other_agent.type == agent_type
                 

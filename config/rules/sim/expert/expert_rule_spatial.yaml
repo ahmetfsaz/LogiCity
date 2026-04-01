@@ -1,0 +1,189 @@
+Rules:
+  - Stop:
+      formula: |
+        Stop(entity) == Exists(
+          [dummyEntityA, dummyEntityB], 
+          Or(
+            And(
+              CollidingClose(entity, dummyEntityA),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              CollidingClose(entity, dummyEntityA),
+              IsPedestrian(dummyEntityA)
+            ),
+            And(
+              IsClose(dummyEntityA, entity),
+              IsPedestrian(dummyEntityA)
+            ),
+            And(
+              IsClose(dummyEntityA, entity),
+              IsAmbulance(dummyEntityA)
+            ),
+            And(
+              RightOf(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              NextTo(dummyEntityA, entity),
+              IsOld(dummyEntityA)
+            ),
+            And(
+              LeftOf(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity),
+              IsAmbulance(dummyEntityA)
+            ),
+            And(
+              IsAtInter(entity),
+              IsInInter(dummyEntityA)
+            ),
+            And(
+              IsInInter(entity),
+              HigherPri(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity)
+            ),
+            And(
+              Not(IsAmbulance(entity)),
+              IsClose(dummyEntityA, entity),
+              IsAmbulance(dummyEntityA),
+              IsAtInter(dummyEntityA)
+            )
+          )
+        )
+      description: Trimmed spatial stop rule with 10 subrules — no bare CollidingClose or bare HigherPri, each requires entity-type or directional specificity.
+  - Slow:
+      formula: |
+        Slow(entity) == Exists(
+          [dummyEntityA, dummyEntityB], 
+          Or(
+            And(
+              Not(Stop(entity)),
+              IsClose(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsClose(entity, dummyEntityA),
+              IsPedestrian(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsClose(dummyEntityA, entity),
+              IsOld(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsClose(dummyEntityA, entity),
+              IsReckless(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsClose(entity, dummyEntityA),
+              IsYoung(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              LeftOf(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              RightOf(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity),
+              IsPedestrian(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsClose(entity, dummyEntityA),
+              IsInInter(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsAtInter(entity),
+              IsClose(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              Not(IsAmbulance(entity)),
+              NextTo(dummyEntityA, entity),
+              IsAmbulance(dummyEntityA)
+            )
+          )
+        )
+      description: Trimmed spatial slow rule with 10 subrules — 8 no ego gate, 1 positional, 1 negated.
+  - Fast:
+      formula: |
+        Fast(entity) == Exists(
+          [dummyEntityA, dummyEntityB], 
+          Or(
+            And(
+              Not(Stop(entity)),
+              HigherPri(entity, dummyEntityA),
+              IsClose(entity, dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              HigherPri(entity, dummyEntityA),
+              IsClose(entity, dummyEntityA),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              Not(IsAtInter(entity)),
+              Not(IsInInter(entity)),
+              HigherPri(entity, dummyEntityA),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsAtInter(entity),
+              HigherPri(entity, dummyEntityA),
+              IsAtInter(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              IsInInter(entity),
+              HigherPri(entity, dummyEntityA),
+              IsClose(entity, dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              Not(IsAtInter(entity)),
+              RightOf(dummyEntityA, entity),
+              IsClose(entity, dummyEntityA),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              Not(IsInInter(entity)),
+              Not(IsAtInter(entity)),
+              RightOf(dummyEntityA, entity),
+              IsClose(dummyEntityA, entity),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              Not(IsAtInter(entity)),
+              LeftOf(dummyEntityA, entity),
+              IsClose(entity, dummyEntityA),
+              IsBus(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              Not(IsOld(entity)),
+              HigherPri(entity, dummyEntityA),
+              IsClose(entity, dummyEntityA),
+              IsCar(dummyEntityA)
+            ),
+            And(
+              Not(Stop(entity)),
+              Not(IsOld(entity)),
+              RightOf(dummyEntityA, entity),
+              IsClose(entity, dummyEntityA)
+            )
+          )
+        )
+      description: Trimmed spatial fast rule with 10 subrules — 2 no ego gate, 6 positional, 2 negated.

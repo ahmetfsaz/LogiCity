@@ -1,5 +1,6 @@
 import os
 import copy
+import json
 import time
 import yaml
 import torch
@@ -118,6 +119,14 @@ def main(args, logger):
             visualize_city(city, 4*WORLD_SIZE, -1, "vis/step_{}.png".format(steps))
         steps += 1
         cached_observation["Time_Obs"][steps] = time_obs
+
+    # Simulation metrics summary
+    if city.metrics_tracker is not None:
+        summary = city.metrics_tracker.log_summary()
+        metrics_path = os.path.join(args.log_dir, "{}_metrics.json".format(args.exp))
+        with open(metrics_path, "w") as f:
+            json.dump(summary, f, indent=2, default=str)
+        logger.info("Metrics saved to {}".format(metrics_path))
 
     # Save the cached observation for better rendering
     with open(os.path.join(args.log_dir, "{}.pkl".format(args.exp)), "wb") as f:

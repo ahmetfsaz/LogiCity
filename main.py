@@ -128,9 +128,10 @@ def main(args, logger):
             json.dump(summary, f, indent=2, default=str)
         logger.info("Metrics saved to {}".format(metrics_path))
 
-    # Save the cached observation for better rendering
-    with open(os.path.join(args.log_dir, "{}.pkl".format(args.exp)), "wb") as f:
-        pkl.dump(cached_observation, f)
+    # Save the cached observation for better rendering (skip during metric experiments to save disk)
+    if city.metrics_tracker is None:
+        with open(os.path.join(args.log_dir, "{}.pkl".format(args.exp)), "wb") as f:
+            pkl.dump(cached_observation, f)
 
 def main_gym(args, logger): 
     torch.manual_seed(args.seed)

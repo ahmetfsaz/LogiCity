@@ -1,0 +1,481 @@
+{
+  "decision_success_rate_subrule": {
+    "average": 0.9132990363650274,
+    "correct": 44850,
+    "incorrect": 4237,
+    "total_evaluated": 49087,
+    "per_agent": {
+      "Car_1": 0.8697735191637631,
+      "Car_2": 0.9294871794871795,
+      "Car_3": 0.8128,
+      "Car_4": 0.9238171611868484,
+      "Car_5": 0.9267707082833133,
+      "Car_6": 0.9547638110488391,
+      "Car_7": 0.8089643167972149,
+      "Car_8": 0.8947157726180944,
+      "Car_9": 0.8652,
+      "Car_10": 0.9630670413488559,
+      "Car_11": 0.9462925851703406,
+      "Car_12": 0.928921568627451,
+      "Car_13": 0.9460165433173705,
+      "Car_14": 0.9267707082833133,
+      "Car_15": 0.9083266613290633,
+      "Car_16": 0.8744,
+      "Car_17": 0.9090544871794872,
+      "Car_18": 0.9976,
+      "Car_19": 0.9250217959895379,
+      "Car_20": 0.9542168674698795
+    },
+    "subrule_mismatches": [
+      {
+        "subrule": "fast_10",
+        "count": 442
+      },
+      {
+        "subrule": "stop_5",
+        "count": 356
+      },
+      {
+        "subrule": "fast_6",
+        "count": 298
+      },
+      {
+        "subrule": "fast_1",
+        "count": 280
+      },
+      {
+        "subrule": "fast_2",
+        "count": 280
+      },
+      {
+        "subrule": "fast_9",
+        "count": 280
+      },
+      {
+        "subrule": "slow_4",
+        "count": 258
+      },
+      {
+        "subrule": "fast_7",
+        "count": 257
+      },
+      {
+        "subrule": "slow_1",
+        "count": 244
+      },
+      {
+        "subrule": "stop_3",
+        "count": 159
+      },
+      {
+        "subrule": "slow_2",
+        "count": 159
+      },
+      {
+        "subrule": "slow_6",
+        "count": 157
+      },
+      {
+        "subrule": "fast_3",
+        "count": 149
+      },
+      {
+        "subrule": "slow_3",
+        "count": 139
+      },
+      {
+        "subrule": "fast_8",
+        "count": 118
+      },
+      {
+        "subrule": "slow_7",
+        "count": 106
+      },
+      {
+        "subrule": "stop_4",
+        "count": 105
+      },
+      {
+        "subrule": "slow_8",
+        "count": 103
+      },
+      {
+        "subrule": "slow_5",
+        "count": 94
+      },
+      {
+        "subrule": "stop_9",
+        "count": 68
+      },
+      {
+        "subrule": "stop_7",
+        "count": 62
+      },
+      {
+        "subrule": "fast_5",
+        "count": 55
+      },
+      {
+        "subrule": "slow_10",
+        "count": 13
+      },
+      {
+        "subrule": "stop_6",
+        "count": 13
+      },
+      {
+        "subrule": "fast_4",
+        "count": 12
+      },
+      {
+        "subrule": "stop_10",
+        "count": 9
+      },
+      {
+        "subrule": "slow_9",
+        "count": 7
+      },
+      {
+        "subrule": "stop_8",
+        "count": 7
+      },
+      {
+        "subrule": "stop_1",
+        "count": 7
+      }
+    ]
+  },
+  "decision_success_rate_action": {
+    "average": 0.8785000000000001,
+    "correct": 1757,
+    "incorrect": 243,
+    "total_evaluated": 2000,
+    "per_agent": {
+      "Car_1": 0.67,
+      "Car_2": 0.83,
+      "Car_3": 1.0,
+      "Car_4": 0.87,
+      "Car_5": 0.94,
+      "Car_6": 0.89,
+      "Car_7": 0.7,
+      "Car_8": 0.65,
+      "Car_9": 1.0,
+      "Car_10": 0.92,
+      "Car_11": 0.88,
+      "Car_12": 0.98,
+      "Car_13": 0.91,
+      "Car_14": 0.99,
+      "Car_15": 0.94,
+      "Car_16": 0.54,
+      "Car_17": 0.97,
+      "Car_18": 1.0,
+      "Car_19": 0.94,
+      "Car_20": 0.95
+    },
+    "action_confusion": [
+      {
+        "baseline": "Stop",
+        "test": "Slow",
+        "count": 102
+      },
+      {
+        "baseline": "Stop",
+        "test": "Fast",
+        "count": 51
+      },
+      {
+        "baseline": "Stop",
+        "test": "Normal",
+        "count": 51
+      },
+      {
+        "baseline": "Fast",
+        "test": "Normal",
+        "count": 24
+      },
+      {
+        "baseline": "Slow",
+        "test": "Fast",
+        "count": 13
+      },
+      {
+        "baseline": "Slow",
+        "test": "Normal",
+        "count": 2
+      }
+    ]
+  },
+  "trajectory_success_rate": {
+    "rate": 0.0,
+    "total": 25,
+    "successful": 0,
+    "violated": 25,
+    "incomplete": 8
+  },
+  "trajectory_records": [
+    {
+      "agent_id": "Car_6",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": true,
+      "violated": true,
+      "steps": 20
+    },
+    {
+      "agent_id": "Car_11",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": true,
+      "violated": true,
+      "steps": 35
+    },
+    {
+      "agent_id": "Car_1",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": true,
+      "violated": true,
+      "steps": 36
+    },
+    {
+      "agent_id": "Car_10",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": true,
+      "violated": true,
+      "steps": 39
+    },
+    {
+      "agent_id": "Car_19",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": true,
+      "violated": true,
+      "steps": 39
+    },
+    {
+      "agent_id": "Car_15",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": true,
+      "violated": true,
+      "steps": 67
+    },
+    {
+      "agent_id": "Car_2",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": true,
+      "violated": true,
+      "steps": 68
+    },
+    {
+      "agent_id": "Car_4",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": true,
+      "violated": true,
+      "steps": 70
+    },
+    {
+      "agent_id": "Car_7",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": true,
+      "violated": true,
+      "steps": 71
+    },
+    {
+      "agent_id": "Car_13",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": true,
+      "violated": true,
+      "steps": 71
+    },
+    {
+      "agent_id": "Car_11",
+      "traj_id": 1,
+      "success": false,
+      "reached_goal": true,
+      "violated": true,
+      "steps": 36
+    },
+    {
+      "agent_id": "Car_12",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": true,
+      "violated": true,
+      "steps": 74
+    },
+    {
+      "agent_id": "Car_6",
+      "traj_id": 1,
+      "success": false,
+      "reached_goal": true,
+      "violated": true,
+      "steps": 72
+    },
+    {
+      "agent_id": "Car_3",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": false,
+      "violated": false,
+      "steps": 100
+    },
+    {
+      "agent_id": "Car_5",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": false,
+      "violated": true,
+      "steps": 100
+    },
+    {
+      "agent_id": "Car_8",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": false,
+      "violated": true,
+      "steps": 100
+    },
+    {
+      "agent_id": "Car_9",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": false,
+      "violated": false,
+      "steps": 100
+    },
+    {
+      "agent_id": "Car_14",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": false,
+      "violated": true,
+      "steps": 100
+    },
+    {
+      "agent_id": "Car_16",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": false,
+      "violated": true,
+      "steps": 100
+    },
+    {
+      "agent_id": "Car_17",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": false,
+      "violated": true,
+      "steps": 100
+    },
+    {
+      "agent_id": "Car_18",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": false,
+      "violated": false,
+      "steps": 100
+    },
+    {
+      "agent_id": "Car_20",
+      "traj_id": 0,
+      "success": false,
+      "reached_goal": false,
+      "violated": true,
+      "steps": 100
+    },
+    {
+      "agent_id": "Car_1",
+      "traj_id": 1,
+      "success": false,
+      "reached_goal": false,
+      "violated": true,
+      "steps": 62
+    },
+    {
+      "agent_id": "Car_10",
+      "traj_id": 1,
+      "success": false,
+      "reached_goal": false,
+      "violated": true,
+      "steps": 59
+    },
+    {
+      "agent_id": "Car_19",
+      "traj_id": 1,
+      "success": false,
+      "reached_goal": false,
+      "violated": true,
+      "steps": 59
+    },
+    {
+      "agent_id": "Car_15",
+      "traj_id": 1,
+      "success": false,
+      "reached_goal": false,
+      "violated": false,
+      "steps": 31
+    },
+    {
+      "agent_id": "Car_2",
+      "traj_id": 1,
+      "success": false,
+      "reached_goal": false,
+      "violated": true,
+      "steps": 30
+    },
+    {
+      "agent_id": "Car_4",
+      "traj_id": 1,
+      "success": false,
+      "reached_goal": false,
+      "violated": true,
+      "steps": 28
+    },
+    {
+      "agent_id": "Car_7",
+      "traj_id": 1,
+      "success": false,
+      "reached_goal": false,
+      "violated": true,
+      "steps": 27
+    },
+    {
+      "agent_id": "Car_13",
+      "traj_id": 1,
+      "success": false,
+      "reached_goal": false,
+      "violated": false,
+      "steps": 27
+    },
+    {
+      "agent_id": "Car_11",
+      "traj_id": 2,
+      "success": false,
+      "reached_goal": false,
+      "violated": false,
+      "steps": 25
+    },
+    {
+      "agent_id": "Car_12",
+      "traj_id": 1,
+      "success": false,
+      "reached_goal": false,
+      "violated": false,
+      "steps": 24
+    },
+    {
+      "agent_id": "Car_6",
+      "traj_id": 2,
+      "success": false,
+      "reached_goal": false,
+      "violated": false,
+      "steps": 4
+    }
+  ]
+}

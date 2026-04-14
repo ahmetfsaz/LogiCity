@@ -45,6 +45,42 @@ agents:
     priority: 0
     young: 1.0
 
+- class: Pedestrian
+  id: 5
+  size: 1
+  gplanner: A*
+  concepts:
+    type: Pedestrian
+    priority: 0
+    old: 1.0
+
+- class: Pedestrian
+  id: 6
+  size: 1
+  gplanner: A*
+  concepts:
+    type: Pedestrian
+    priority: 0
+    young: 1.0
+
+- class: Pedestrian
+  id: 7
+  size: 1
+  gplanner: A*
+  concepts:
+    type: Pedestrian
+    priority: 0
+    young: 1.0
+
+- class: Pedestrian
+  id: 8
+  size: 1
+  gplanner: A*
+  concepts:
+    type: Pedestrian
+    priority: 0
+    old: 1.0
+
 - class: Private_car
   id: 2
   size: 1

@@ -51,46 +51,46 @@ def load_data():
 # FIGURE 1 — Performance curves (2 rows × 3 columns)
 # ══════════════════════════════════════════════════════════════════════════════
 def make_figure1(data):
+    # "Hypothesis DSR" is the same as "Subrule DSR" — renamed for paper terminology
     rule_sets = [
-        ("fov5_20c8p_r70_original",       "#1b9e77", "o", "Original (12)"),
-        ("fov5_20c8p_r70_extended",        "#d95f02", "^", "Extended (48)"),
-        ("fov5_20c8p_r70_spatial",         "#7570b3", "v", "Spatial (30)"),
-        ("fov5_20c8p_r70_discriminative",  "#e7298a", "D", "Discrimin. (30)"),
+        ("fov5_20c8p_r70_original",       "#1b9e77", "o", "Original"),
+        ("fov5_20c8p_r70_extended",        "#d95f02", "^", "Extended"),
+        ("fov5_20c8p_r70_spatial",         "#7570b3", "v", "Spatial"),
+        ("fov5_20c8p_r70_discriminative",  "#e7298a", "D", "Discriminative"),
     ]
 
     mode_pairs = [
-        ("semantic",          "semantic_random",          "GNA (Direct)"),
-        ("semantic_lna",      "semantic_lna_random",      "Multi-Zone LNA"),
-        ("semantic_lna_single","semantic_lna_random_single","Single-Zone LNA"),
+        ("semantic",           "semantic_random",           "Sensor GNA"),
+        ("semantic_lna",       "semantic_lna_random",       "Multi-Zone LNA"),
+        ("semantic_lna_single","semantic_lna_random_single","Single-Zone GNA"),
     ]
+    # Columns: Hypothesis DSR (left), Action DSR (right)
     metrics = [
-        ("sr_mean",  "sr_std",  "Subrule DSR"),
+        ("sr_mean",  "sr_std",  "Hypothesis DSR"),
         ("act_mean", "act_std", "Action DSR"),
     ]
 
-    fig, axes = plt.subplots(2, 3, figsize=(7.5, 4.2), sharex=True)
+    # Layout: 3 rows (modes) × 2 cols (metrics)
+    fig, axes = plt.subplots(3, 2, figsize=(5.0, 6.5), sharex=True)
 
-    for col, (sem_mode, rnd_mode, col_title) in enumerate(mode_pairs):
+    for row, (sem_mode, rnd_mode, row_title) in enumerate(mode_pairs):
         is_lna = "lna" in sem_mode
         k_labels = [f"k2={i}" for i in range(6)] if is_lna else [str(i) for i in range(6)]
         k_nums = np.arange(6)
 
-        for row, (mean_key, std_key, row_label) in enumerate(metrics):
+        for col, (mean_key, std_key, col_label) in enumerate(metrics):
             ax = axes[row, col]
 
             for label, color, marker, rs_name in rule_sets:
                 for mode_key, is_sem in [(sem_mode, True), (rnd_mode, False)]:
-                    means, stds = [], []
+                    means = []
                     for k in k_labels:
                         key = (label, mode_key, k)
                         if key in data and data[key]["sr_mean"] != "FAIL":
                             means.append(float(data[key][mean_key]))
-                            stds.append(float(data[key][std_key]))
                         else:
                             means.append(np.nan)
-                            stds.append(0)
                     means = np.array(means)
-                    stds = np.array(stds)
 
                     ls = "-" if is_sem else "--"
                     mfc = "white" if is_sem else color
@@ -108,21 +108,22 @@ def make_figure1(data):
             ax.tick_params(direction="in", top=True, right=True)
 
             if row == 0:
-                ax.set_title(col_title, fontweight="bold", pad=6)
-            if row == 1:
-                xlabel = "$k$"
-                ax.set_xlabel(xlabel)
+                ax.set_title(col_label, fontweight="bold", pad=6)
+            if row == 2:
+                ax.set_xlabel("$k$")
+
             if col == 0:
-                ax.set_ylabel(row_label)
+                ax.set_ylabel(row_title)
 
-            if row == 0 and col > 0:
-                ax.set_ylim(0.85, 1.005)
-            elif row == 1 and col > 0:
-                ax.set_ylim(0.80, 0.95)
-            else:
+            # Y-axis ranges per panel
+            if row == 0:
                 ax.set_ylim(0.78, 1.015)
+            elif col == 0:  # Hypothesis DSR for LNA rows
+                ax.set_ylim(0.85, 1.005)
+            else:           # Action DSR for LNA rows
+                ax.set_ylim(0.80, 0.95)
 
-    # Legend: one entry per rule set (color+marker) + semantic/random line style
+    # Legend
     rs_handles = [
         Line2D([0], [0], color=c, ls="-", marker=m,
                markerfacecolor="white", markeredgecolor=c,
@@ -131,17 +132,17 @@ def make_figure1(data):
     ]
     style_handles = [
         Line2D([0], [0], color="0.3", ls="-", lw=1.6, label="Semantic"),
-        Line2D([0], [0], color="0.3", ls="--", lw=1.0, label="Random"),
+        Line2D([0], [0], color="0.3", ls="--", lw=1.0, label="FOL-baseline"),
     ]
     all_handles = rs_handles + style_handles
 
     fig.legend(handles=all_handles, loc="lower center", ncol=3,
               frameon=True, fancybox=False, edgecolor="0.7",
-              bbox_to_anchor=(0.5, 0.01), fontsize=7.5,
+              bbox_to_anchor=(0.5, 0.005), fontsize=7.5,
               handletextpad=0.4, columnspacing=1.2)
 
     fig.align_ylabels(axes[:, 0])
-    plt.subplots_adjust(hspace=0.25, wspace=0.30, bottom=0.22)
+    plt.subplots_adjust(hspace=0.30, wspace=0.30, bottom=0.14)
 
     out = "fig1_performance_curves.pdf"
     fig.savefig(out)

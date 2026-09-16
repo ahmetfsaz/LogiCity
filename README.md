@@ -1,210 +1,198 @@
-# LogiCity
-Officially published in NeurIPS'24 D&B Track.
+# Goal-Oriented Semantic Communication in LogiCity
 
-<img src="imgs/81.png" alt="81" style="zoom:30%;" />
+Experiment code for:
 
-## Abstract
+> **Goal-Oriented Semantic Communication for Logical Decision Making**
+> Ahmet Faruk Saz, Faramarz Fekri — *IEEE GLOBECOM 2026*
+> [arXiv:2604.19614](https://arxiv.org/abs/2604.19614)
 
-  Recent years have witnessed the rapid development of Neuro-Symbolic (NeSy) AI systems, which integrate symbolic reasoning into deep neural networks.
-  However, most of the existing benchmarks for NeSy AI fail to provide long-horizon reasoning tasks with complex multi-agent interaction.
-  Furthermore, they are usually constrained by fixed and simplistic logical rules over limited entities, making them inadequate for capturing real-world complexities.
-  To address these crucial gaps, we introduce LogiCity, the first simulator based on customizable first-order logic (FOL) for urban environments with multiple dynamic agents.
-  LogiCity models various urban elements, including buildings, cars, and pedestrians, using semantic and spatial concepts, such as $\texttt{IsAmbulance}(\texttt{X})$ and $\texttt{IsClose}(\texttt{X}, \texttt{Y})$. 
-  These concepts are used to define FOL rules governing the behavior of multiple dynamic agents. 
-  Since the concepts and rules are abstractions, cities with distinct agent compositions can be easily instantiated and simulated. 
-  Besides, a key benefit is that LogiCity allows for user-configurable abstractions, which enables customizable simulation complexities about logical reasoning.
-  To explore various aspects of NeSy AI, we design long-horizon sequential decision-making and one-step visual reasoning tasks, varying in difficulty and agent behaviors.
-  Our extensive evaluation using LogiCity reveals the advantage of NeSy frameworks in abstract reasoning. 
-  Moreover, we highlight the significant challenges of handling more complex abstractions in long-horizon multi-agent reasoning scenarios or under high-dimensional, imbalanced data.
-  With the flexible design, various features, and newly raised challenges, we believe LogiCity represents a pivotal step for advancing the next generation of NeSy AI.
+This is a fork of [LogiCity](https://github.com/Jaraxxus-Me/LogiCity) (Li et al., NeurIPS 2024
+D&B). The simulator is upstream's; this fork adds a semantic communication layer on top of it.
+For the simulator itself — installation, city customization, the original SPF and VAP tasks —
+see [UPSTREAM.md](UPSTREAM.md).
 
-## Installation
+## What this adds
 
-- From scratch
+Agents in LogiCity act on first-order logic traffic rules evaluated by a Z3 solver, but each
+sees only a limited field of view. A Global Navigation Assistant (GNA) can send an agent a
+small number of additional FOL expressions about its surroundings. Which ones should it send?
 
-  ```shell
-  # requirements for logicity
-  # using conda env
-  conda create -n logicity python=3.11.5
-  conda activate logicity
-  # pyastar, in the LogiCity folder
-  mkdir src
-  cd src
-  git clone https://github.com/Jaraxxus-Me/pyastar2d.git
-  cd pyastar2d
-  # install pyastar
-  pip install -e .
-  # install logicity-lib
-  cd ..
-  cd ..
-  pip install -v -e .
-  ```
-- Using docker
+This fork implements the goal-oriented selection rule from the paper. Task rules partition
+world states into **goal states** — logical equivalence classes that lead to the same action —
+and transmitted evidence is chosen to most sharply resolve which goal state holds. The
+objective is optimized by a polynomial-time lexicographic comparison over small integers,
+avoiding direct construction of the doubly-exponential constituent space. The baseline selects
+the same number of expressions uniformly at random.
 
-  ```shell
-  docker pull bowenli1024/logicity:latest
-  docker run bowenli1024/logicity:latest
-  # inside the docker container
-  conda activate logicity
-  cd path/to/LogiCity
-  pip install -v -e .
-  ```
+## Implementation
 
-## Simulation
+Three files hold the method; everything else in `logicity/` is upstream.
 
-### Running
+**[`logicity/utils/semantic_selection.py`](logicity/utils/semantic_selection.py)** — the
+selection objective. Assigns inductive probabilities by uniform weight over constituents, the
+maximally specific world descriptions of a dyadic first-order language over 11 monadic and 6
+dyadic predicates, then chooses the evidence subset minimizing the summed Bernoulli variance
+of the traffic-rule hypotheses:
 
-Running the simulation for santity check, the cached data will be saved to a `.pkl` file.
-
-```shell
-mkdir log_sim
-# easy mode
-# the configuration is config/tasks/sim/easy.yaml, pkl saved to log_sim
-bash scripts/sim/run_sim_easy.sh
-# expert mode
-# the configuration is config/tasks/sim/expert.yaml, pkl saved to log_sim
-bash scripts/sim/run_sim_expert.sh
+```
+min_{Ê ⊆ E}  Σ_i  p(Ê) · p(Γ_i | Ê) · (1 − p(Γ_i | Ê))
 ```
 
-### Visualization
+The direct form underflows in floating point, since the exponents involved have billions of
+digits, so `compute_objective_simplified` evaluates the equivalent lexicographic key over small
+integers instead. `select_optimal_subset` is the entry point; the module docstring derives the
+probability model in full.
 
-- Render some default carton-style city
-  ```python3
-  # get the carton-style images
-  mkdir vis
-  python3 tools/pkl2city.py --pkl log_sim/easy_100_0.pkl --output_folder vis # modify to your pkl file
-  # make a video
-  python3 tools/img2video.py vis demo.gif # change some file name if necessary
-  ```
+**[`logicity/agents/gna.py`](logicity/agents/gna.py)** — the Global Navigation Assistant.
+Collects agent state before Z3 reasoning, then broadcasts a filtered top-k subset to each
+agent, giving it awareness beyond its own field of view.
 
-### Customize a City
-The configurations (abstractions) of a City is defined (for example, the easy demo) here: `config/tasks/sim/*.yaml`.
-```yaml
-simulation:
-  map_yaml_file: "config/maps/square_5x5.yaml"       # OpenAI Gym environment name
-  agent_yaml_file: "config/agents/easy/train.yaml" # Agents in the simulation
-  ontology_yaml_file: "config/rules/ontology_easy.yaml" # Ontology of the simulation
-  rule_type: "Z3"               # z3 rl will set the rl_agent with fixed number of other entities, return the groundings as obs, and return the rule reward
-  rule_yaml_file: "config/rules/sim/easy/easy_rule.yaml"                 # Whether to render the environment
-  rl: false
-  debug: false
-  use_multi: false
-  agent_region: 100
-```
-Things you might want to play with:
-- `agent_yaml_file` defines the agent configuration, you can arbitarily define your own configurations.
-- `rule_yaml_file` defines the FOL rules of the city. You can customize your own rule, but the naming should follow [z3](https://ericpony.github.io/z3py-tutorial/guide-examples.htm#:~:text=Satisfiability%20and%20Validity).
-- `ontology_yaml_file` defines the possible concepts in the city (used by the rules). You can also customize the *grounding* functions specified in the function fields.
+**[`logicity/agents/lna.py`](logicity/agents/lna.py)** — the Local Navigation Assistants, a
+grid of zone-level assistants placed at intersections. Each covers a non-overlapping
+rectangular zone: cars uplink their top-`k1` field-of-view entities, and the assistant
+aggregates, filters, re-grounds, and relays top-`k2` entities back to each ego car. This is
+what the `semantic_lna*` selection modes exercise.
 
-## Safe Path Following (SPF, master branch, Tab. 2 in paper)
+The remaining files in `logicity/agents/` (`basic.py`, `car.py`, `pedestrian.py`, `bus.py`)
+are upstream's agent classes.
 
-In the Safe Path Following (SPF) task: the controlled agent is a car, it has 4 action spaces, "Slow" "Fast" "Normal" and "Stop". We require a policy to navigate the ego agent to its goal with minimum trajectory cost.
-This is an RL wrapper using the simulation above. We have used [stable-baselines3](https://stable-baselines3.readthedocs.io/en/master/) coding format.
+## Setup
 
-### Dataset
-Download the train/val/test episodes [here](https://drive.google.com/file/d/1ePLVlNH77VV25171yOSgku21tji9ISdG/view?usp=sharing) and unzip it.
-The folder structure should be like:
+Install as upstream describes, then activate the environment:
 
-```plaintext
-LogiCity/
-├── dataset/
-│   ├── easy/
-│   │   ├── test_100_episodes.pkl
-│   │   ├── val_40_episodes.pkl
-│   │   └── train_1ktraj.pkl
-│   ├── expert/
-│   │   ├── test_100_episodes.pkl
-│   │   ├── val_40_episodes.pkl
-│   │   └── train_1ktraj.pkl
-│   └── ...
-├── logicity/
-├── config/
-└── ...
+```bash
+conda activate logicity
 ```
 
-### Pre-trained Models & Test
-All of the models displayed in Tab. 2 can be downloaded [here](https://drive.google.com/file/d/1gDMu4AlljMR1FeUh5ty1y7sO0KW5CV4d/view?usp=sharing).
-Structure them into:
-```plaintext
-LogiCity/
-├── checkpoints/
-│   ├── final_models/
-│   │   ├── spf_emp/
-│   │   │   ├── easy/
-│   │   │   │   ├── dqn.zip
-│   │   │   │   ├── nlmdqn.zip
-│   │   │   │   └── ...
-│   │   │   ├── expert/
-│   │   │   ├── hard/
-│   │   │   └── medium/
-├── logicity/
-├── config/
-└── ...
+**Before running anything**, open the scripts in `scripts/sim/` and fix the conda path. They
+currently hardcode:
+
+```bash
+source /opt/anaconda3/etc/profile.d/conda.sh
 ```
 
-To test them, an example command could be:
-```
-# this test NLM-DQN in expert mode
-python3 main.py --config config/tasks/Nav/expert/algo/nlmdqn_test.yaml --exp nlmdqn_expert_test \
-    --checkpoint_path checkpoints/final_models/spf_emp/expert/nlmdqn.zip --use_gym
+A commented alternative (`/opt/conda/...`) sits directly above it. Adjust to your install.
+
+## Running experiments
+
+All experiments run through `main.py` against `config/tasks/sim/expert.yaml`. The scripts in
+`scripts/sim/` sweep that config and collect metrics; there is no separate entry point.
+
+| Script | What it does |
+| --- | --- |
+| `run_semantic_quick_test.sh` | A few `gna_top_k` values, semantic vs. random. Start here to check the pipeline. |
+| `run_semantic_experiments.sh` | Main sweep: `gna_top_k` 0–5 across all six selection modes, 3 trials each. |
+| `run_gna_top_k_experiments.sh` | `gna_top_k` 0–10, 5 trials each, reporting rule observability and informativeness. |
+| `run_gna_top_k_quick_test.sh` | Shortened version of the above. |
+| `run_full_experiments.sh` | Master orchestrator: sweeps field of view, agent density, vicinity radius, and rule set. |
+| `run_experiment_worker.sh` | Runs one configuration through all modes; called by the orchestrator. |
+| `run_metrics_verification.sh` | Sanity check that metrics vary across configurations. |
+| `generate_agents.py` | Builds an agent YAML for a given car and pedestrian count. |
+| `run_sim_easy.sh`, `run_sim_expert.sh` | Upstream's plain simulation runs, no communication. |
+
+A typical first run:
+
+```bash
+bash scripts/sim/run_semantic_quick_test.sh     # validate
+bash scripts/sim/run_semantic_experiments.sh    # full sweep
 ```
 
-The metrics for this taks are:
-- Traj Succ: If the agent gets to goal within 2x oracle steps without violating any rules
-- Decision Succ: Count only the traj w/ rule constraints
-- Reward: Action Cost * weight + Rule Violation
+To sweep a different rule set, set `RULE_FILE`:
 
-The output will be at `log_rl/nlmdqn_expert_test.log`.
+```bash
+RULE_FILE=config/rules/sim/expert/expert_rule_spatial.yaml \
+  bash scripts/sim/run_semantic_experiments.sh
+```
 
-### Train a New Model
-All the configurations for all the models are at `config/tasks/Nav`.
-We provide two examples to train models:
-```
-# Training GNN-Behaviro Cloning Agent in easy mode
-python3 main.py --config config/tasks/Nav/easy/algo/gnnbc.yaml --exp gnnbc_easy_train --use_gym
-# Training DQN Agent in easy mode, with 2 parallel envs
-python3 main.py --config config/tasks/Nav/easy/algo/dqn.yaml --exp gnnbc_easy_train --use_gym
-```
-Outputs from RL training is like the following:
-```shell
-----------------------------------
-| rollout/            |          |
-|    ep_len_mean      | 41.5     |
-|    ep_rew_mean      | -10.2    |
-|    exploration_rate | 0.998    |
-|    success_rate     | 0        |
-| time/               |          |
-|    episodes         | 4        |
-|    fps              | 9        |
-|    time_elapsed     | 18       |
-|    total_timesteps  | 184      |
-----------------------------------
-```
-The checkpoints will be saved in `checkpoints`. By default, the validation episodes are used and the results are saved also in `checkpoints`.
+`run_full_experiments.sh` takes no arguments — experiments are declared inside it with
+`add_experiment`, labelled `fov{N}_{cars}c{peds}p_r{region}_{ruleset}`. Most are commented out
+because they have already been run; uncomment the ones you want. Note that it edits
+`AGENT_FOV` in `logicity/core/config.py` between groups and restores it at the end, so let it
+finish cleanly. It runs up to 5 experiments in parallel (`MAX_PARALLEL`).
 
-### Customize you own City and study RL
-Configurations for RL training and testing are in this folder: `config/tasks/Nav`.
-Similar to the simulation process, you can customize agent compositions, rules, and concepts by changing the fields in `config/tasks/Nav/easy/algo`
-using different `.yaml` files.
-We also probided a bunch of tools (collecting demonstrations, for example) in `scripts/rl`. You might find them useful.
+## Selection modes
 
-## Visual Action Prediction (VAP), Tab.3, 4, LLM experiments.
+Set by `gna_selection_mode` in the config, or swept by the scripts.
 
-In the Visual Action Prediction (VAP) task: the algorithm is required to predict actions for all the agents in an RGB Image (Or language discription).
-The code and instuctions for VAP is in `vis` branch:
-```
-git checkout vis
-pip install -v -e .
-```
-## Reference
-If you used our work in your research, or you find our work useful, please cite us as:
-```
-@INPROCEEDINGS{Li2023logicity,     
-  title={{LogiCity: Advancing Neuro-Symbolic AI with Abstract Urban Simulation}},
-  author={Li, Bowen and Li, Zhaoyu and Du, Qiwei and Luo, Jinqi and Wang, Wenshan and Xie, Yaqi and Stepputtis, Simon and Wang, Chen and Sycara, Katia P and Ravikumar, Pradeep Kumar and Gray, Alex and Si, Xujie and Scherer, Sebastian}, 
-  booktitle={Proceedings of the Advances in Neural Information Processing Systems (NeurIPS)}, 
-  year={2024},
-  volume={},
-  number={}
+| Mode | Behavior |
+| --- | --- |
+| `semantic` | Goal-oriented selection (the proposed method) |
+| `semantic_random` | Uniform random selection at the same budget (baseline) |
+| `semantic_lna` | Local assistant variant; uplink sends the full field of view, downlink budget is `gna_top_k2` |
+| `semantic_lna_random` | Random counterpart to the above |
+| `semantic_lna_single` | Single-zone variant |
+| `semantic_lna_random_single` | Random counterpart to the single-zone variant |
+
+## Rule sets
+
+Four rule files under `config/rules/sim/expert/`:
+
+| File | Description |
+| --- | --- |
+| `expert_rule.yaml` | Upstream's original rule set |
+| `expert_rule_extended.yaml` | More hypotheses |
+| `expert_rule_spatial.yaml` | Emphasizes spatially-dependent rules |
+| `expert_rule_discriminative.yaml` | Built to maximize entity diversity among hypotheses (default) |
+
+## Configuration keys
+
+The scripts patch these in `config/tasks/sim/expert.yaml`:
+
+| Key | Meaning |
+| --- | --- |
+| `enable_gna` | Turns the Global Navigation Assistant on |
+| `gna_selection_mode` | Selection strategy (table above) |
+| `gna_top_k` | Number of FOL expressions transmitted |
+| `gna_top_k1`, `gna_top_k2` | Uplink and downlink budgets for the LNA modes |
+| `agent_region` | Vicinity radius |
+| `agent_yaml_file` | Agent composition |
+| `rule_yaml_file` | Rule set |
+| `enable_sim_metrics` | Enables metric collection |
+
+`AGENT_FOV` lives in `logicity/core/config.py`, not in the YAML.
+
+> The sweep scripts modify `config/tasks/sim/expert.yaml` in place, keeping a `.backup`
+> alongside it. If a run is interrupted, check that the config was restored before starting
+> another.
+
+## Outputs
+
+Each script writes to its own timestamped directory: `semantic_experiments_<timestamp>/`,
+`gna_top_k_results_<timestamp>/`, or `full_experiments_<timestamp>/` (which holds `configs/`,
+`agents/`, and `logs/`). Raw simulation logs go to `log_sim/`.
+
+Metrics are reported as mean ± standard deviation across trials:
+
+- **Decision Success Rate**, at subrule and action level — agreement with a full-information
+  baseline in which the agent observes its entire vicinity
+- **Trajectory Success Rate**
+- **Per-agent rule observability** — the share of rules fully, partially, and unobserved
+- **Normalized informativeness** — how well an agent's information explicates the true world state
+
+Results from the runs reported in the paper are in `full_experiments_merged/`.
+
+## Citation
+
+Please cite both the paper and the simulator it builds on:
+
+```bibtex
+@inproceedings{saz2026goaloriented,
+  title     = {Goal-Oriented Semantic Communication for Logical Decision Making},
+  author    = {Saz, Ahmet Faruk and Fekri, Faramarz},
+  booktitle = {Proceedings of the IEEE Global Communications Conference (GLOBECOM)},
+  year      = {2026}
+}
+
+@inproceedings{li2024logicity,
+  title     = {{LogiCity}: Advancing Neuro-Symbolic AI with Abstract Urban Simulation},
+  author    = {Li, Bowen and Li, Zhaoyu and Du, Qiwei and Luo, Jinqi and Wang, Wenshan
+               and Xie, Yaqi and Stepputtis, Simon and Wang, Chen and Sycara, Katia P.
+               and Ravikumar, Pradeep Kumar and Gray, Alex and Si, Xujie and Scherer, Sebastian},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2024}
 }
 ```
+
+## License
+
+Inherited from upstream LogiCity — see [LICENSE](LICENSE).

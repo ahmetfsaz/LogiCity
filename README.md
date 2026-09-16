@@ -7,9 +7,7 @@ Experiment code for:
 > [arXiv:2604.19614](https://arxiv.org/abs/2604.19614)
 
 This is a fork of [LogiCity](https://github.com/Jaraxxus-Me/LogiCity) (Li et al., NeurIPS 2024
-D&B). The simulator is upstream's; this fork adds a semantic communication layer on top of it.
-For the simulator itself — installation, city customization, the original SPF and VAP tasks —
-see [UPSTREAM.md](UPSTREAM.md).
+D&B). The simulator is forked; this fork adds a semantic communication layer on top of it.
 
 ## What this adds
 
@@ -58,7 +56,7 @@ are upstream's agent classes.
 
 ## Setup
 
-Install as upstream describes, then activate the environment:
+Install as original branch describes, then activate the environment:
 
 ```bash
 conda activate logicity
